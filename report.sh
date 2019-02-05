@@ -11,6 +11,22 @@
     percent=$(printf "%.3f" "$(echo "($reproducible / $total) * 100" | bc -l)")
 
     cat <<EOF
+<html>
+<head>
+<title>NixOS's minimal ISO is $percent% reproducible!</title>
+<meta name="description" content="nixos-unstable's iso_minimal.x86_64-linux build is $percent% reproducible!" />
+
+<!-- Twitter Card data -->
+<meta name="twitter:card" value="summary">
+
+<!-- Open Graph data -->
+<meta property="og:title" content="Is NixOS Reproducible?" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://r13y.com/" />
+<meta property="og:image" content="https://nixos.org/logo/nixos-logo-only-hires.png" />
+<meta property="og:description" content="nixos-unstable's iso_minimal.x86_64-linux build is $percent% reproducible!" />
+</head>
+<body>
 <h1>Is NixOS Reproducible?</h1>
 <h2>Currently tracking: <code>nixos-unstable</code>'s
     <code>iso_minimal</code> job for <code>x86_64-linux</code>.</h2>
@@ -38,5 +54,6 @@ EOF
 <small>Generated at $(TZ=UTC date) from
 <a href="https://github.com/grahamc/r13y.com">https://github.com/grahamc/r13y.com</a></small>
 <center><img style="max-width: 100px" src="https://nixos.org/logo/nixos-logo-only-hires.png" /></center>
+</body></html>
 EOF
 }
