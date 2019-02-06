@@ -33,9 +33,44 @@ body {
     margin-left: auto;
     margin-right: auto;
 }
+
+.logo {
+  display: flex;
+}
+
+.logo__letter {
+  font-size: 200%;
+  align-self: flex-end;
+}
+
+.logo__middle {
+  display: flex;
+  flex-direction: column;
+  padding-left: 3px;
+  margin-right: -5px;
+}
+
+.logo__count {
+  text-align: center;
+  padding-top: 6px;
+}
+
+.logo__text {
+  font-variant: small-caps;
+  border-top: 1px solid black;
+  font-size: 50%;
+}
 </style>
 </head>
 <body>
+<h1 class="logo">
+  <span class="logo__letter logo__letter--start">R</span>
+  <span class="logo__middle">
+    <span class="logo__count">13</span>
+    <span class="logo__text">eproducibilit</span>
+  </span>
+  <span class="logo__letter logo__letter--end">Y: NixOS</span>
+</h1>
 <h1>Is NixOS Reproducible?</h1>
 <h2>Tracking: <code>nixos-unstable</code>'s
     <code>iso_minimal</code> job for <code>x86_64-linux</code>.</h2>
