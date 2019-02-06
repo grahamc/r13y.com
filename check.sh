@@ -8,7 +8,6 @@ export LANG=en_US.UTF-8
 export LOCALE_ARCHIVE=/run/current-system/sw/lib/locale/locale-archive
 
 CORES=$(nproc)
-LOGFILE=./reproducibility-log
 REPORT_STORE=$(pwd)/public
 
 function update_nixpkgs() (
@@ -20,6 +19,11 @@ function update_nixpkgs() (
     cd nixpkgs
     git fetch origin
     git checkout origin/nixos-unstable
+)
+
+function nixpkgs_rev() (
+    cd nixpkgs
+    git rev-parse HEAD
 )
 
 function nix_store_path_requisite_drvs() {
@@ -55,6 +59,8 @@ function have_checked_before() {
 
 function main() {
     update_nixpkgs
+    export REV=$(nixpkgs_rev)
+    export LOGFILE="./reproducibility-log-$REV"
 
     top_level_drv=$(find_iso_minimal_drv_x86_64_linux)
     printf "ISO Drv: %s\n" "$top_level_drv"
