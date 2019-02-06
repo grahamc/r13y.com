@@ -4,12 +4,13 @@
 {
     cd nixpkgs
     rev=$(git rev-parse HEAD)
+    export LOGFILE="./reproducibility-log-$rev"
     cd ..
 
-    cp ./reproducibility-log "./public/reproducibility-log-$rev"
+    cp "$LOGFILE" "./public/"
 
-    reproducible=$(cat ./reproducibility-log | grep '^reproducible' | wc -l)
-    total=$(cat ./reproducibility-log | wc -l)
+    reproducible=$(cat "$LOGFILE" | grep '^reproducible' | wc -l)
+    total=$(cat "$LOGFILE" | wc -l)
     percent=$(printf "%.3f" "$(echo "($reproducible / $total) * 100" | bc -l)")
 
     cat <<EOF
@@ -88,7 +89,7 @@ nix-build ./nixos/release-combined.nix -A nixos.iso_minimal.x86_64-linux
 <ul>
 EOF
 
-    for drv in $(cat ./reproducibility-log | awk '$1 == "unreproducible" { print $2; }'); do
+    for drv in $(cat "$LOGFILE" | awk '$1 == "unreproducible" { print $2; }'); do
         cat <<EOF
 <li><a href="./diff/$(basename "$drv").html">(diffoscope)</a> <a href=".$drv">(drv)</a> <code>$drv</code></li>
 EOF
@@ -96,7 +97,7 @@ EOF
 
     cat <<EOF
 </ul>
-<p><a href="./reproducibility-log-$rev">full list of build results</a></p>
+<p><a href="./$LOGFILE">full list of build results</a></p>
 <hr />
 <h3 id="test-circumstance">How are these tested?</h3>
 <p>Each build is run twice, at different times, on different hardware
