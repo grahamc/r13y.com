@@ -18,7 +18,7 @@ function update_nixpkgs() (
 
     cd nixpkgs
     git fetch origin
-    git checkout origin/nixos-unstable
+    git checkout origin/nixos-unstable-small
 )
 
 function nixpkgs_rev() (
