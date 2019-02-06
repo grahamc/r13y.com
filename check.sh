@@ -72,8 +72,8 @@ function main() {
 
     for drv in $(nix_store_path_requisite_drvs "$top_level_drv"); do
         attempted=$((attempted + 1))
+        drvname=$(drv_name "$drv")
         (
-            name=$(drv_name "$drv")
             nix copy "$drv" --to "$REPORT_STORE"
 
             if have_checked_before "$drv"; then
@@ -93,7 +93,7 @@ function main() {
 
                 log "unreproducible" "$drv"
             fi
-        ) 2>&1 | sed -e "s#^#($attempted / $total | $name)    #"
+        ) 2>&1 | sed -e "s#^#($attempted / $total | $drvname)    #"
     done
 }
 
