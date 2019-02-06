@@ -83,7 +83,7 @@ git checkout $rev
 nix-build ./nixos/release-combined.nix -A nixos.iso_minimal.x86_64-linux
 </pre>
 
-<h1 style="color: green">$reproducible / $total ($percent%) are reproducible!</h1>
+<h1 style="color: green">$reproducible out of $total ($percent%) paths in the minimal installation image are reproducible!</h1>
 <hr>
 <h3>unreproduced paths</h3>
 <ul>
