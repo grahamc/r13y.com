@@ -1,8 +1,7 @@
 #!/usr/bin/env nix-shell
-#!nix-shell -i bash -p jq diffoscope nix git findutils coreutils --pure
+#!nix-shell -i bash ./default.nix -I nixpkgs=channel:nixos-unstable-small
 
 set -eux
-
 
 export LANG=en_US.UTF-8
 export LOCALE_ARCHIVE=/run/current-system/sw/lib/locale/locale-archive

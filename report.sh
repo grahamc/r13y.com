@@ -1,5 +1,5 @@
 #!/usr/bin/env nix-shell
-#!nix-shell -i bash -p bc
+#!nix-shell -i bash ./default.nix -I nixpkgs=channel:nixos-unstable-small
 
 {
     cd nixpkgs
