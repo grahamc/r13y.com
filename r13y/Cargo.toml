@@ -1,0 +1,6 @@
+[package]
+name = "r13y"
+version = "0.1.0"
+authors = ["Graham Christensen <graham@grahamc.com>"]
+
+[dependencies]
