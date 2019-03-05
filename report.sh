@@ -111,7 +111,7 @@ layer, but many of the reproducibility issues are being exercised
 already. It isn't possible to <em>guarantee</em> a package is
 reproducible, just like it isn't possible to prove software is
 bug-free. It is possible there is nondeterminism in a package source,
-waiting for the some specific circumstance.</p>
+waiting for some specific circumstance.</p>
 
 <p>This is why we run these tests: to track how we are doing over
 time, to submit bug fixes for nondeterminism when we find them.</p>
@@ -131,7 +131,7 @@ are two routes.</p>
 <p>Pretending you are debugging a nondeterminism bug in
 <code>hello</code>. To check it, you build the package, and then
 build it again with <code>--check --keep-failed</code>. This will
-provide the differing output in a separate directory whic you can
+provide the differing output in a separate directory which you can
 use <code>diffoscope</code> on.</p>
 
 <pre>
