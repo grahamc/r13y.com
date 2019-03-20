@@ -13,7 +13,6 @@ function nixpkgs_rev() (
 function main() {
     export REV=$(nixpkgs_rev)
     export HASH=$(nix-prefetch-url --unpack "https://github.com/NixOS/nixpkgs/archive/${REV}.tar.gz")
-    cd ./r13y
     export RUST_BACKTRACE=1
     export RUST_LOG=debug
     cargo run --bin check -- "$REV" "$HASH"

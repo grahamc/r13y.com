@@ -1,3 +1,7 @@
 nixpkgs
 public
 result.drv
+target
+report
+tmp
+done
