@@ -1,6 +1,5 @@
 extern crate r13y;
 extern crate serde;
-#[macro_use] extern crate serde_derive;
 #[macro_use] extern crate log;
 extern crate env_logger;
 extern crate serde_json;
@@ -9,35 +8,23 @@ extern crate rand;
 extern crate sha2;
 extern crate digest;
 extern crate tempdir;
-use std::thread;
 use std::env;
 use std::fs;
 use std::fs::File;
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::path::{Path, PathBuf};
 use std::collections::HashSet;
-use std::io::{Write, Read, BufRead, BufReader};
-use std::sync::{Arc, Mutex};
-use std::sync::mpsc::channel;
-use r13y::messages;
+use std::io::{Write, BufRead};
 use r13y::messages::{
     BuildRequest,
     BuildRequestV1,
-    BuildResponse,
     BuildResponseV1,
     BuildStatus,
     Subset,
-    Hashes,
     Attr,
 };
-use r13y::derivation;
 use r13y::derivation::Derivation;
-use r13y::store;
-use r13y::store::Store;
-use r13y::contentaddressedstorage;
 use r13y::contentaddressedstorage::ContentAddressedStorage;
-use rand::seq::SliceRandom;
-use r13y::glue;
 use r13y::diffoscope::Diffoscope;
 use chrono::Utc;
 
@@ -137,7 +124,6 @@ fn main() {
     let diffoscope = Diffoscope::new(write_cas.clone());
     let mut total = 0;
     let mut reproducible = 0;
-    let mut unreproducible = 0;
     let mut unreproducible_list: Vec<String> = vec![];
     let mut unchecked = 0;
     for response in results
@@ -153,7 +139,6 @@ fn main() {
             BuildStatus::Reproducible => { reproducible += 1; },
             BuildStatus::FirstFailed => { unchecked += 1; },
             BuildStatus::SecondFailed => { unchecked += 1; },
-            BuildStatus::Reproducible => { reproducible += 1; },
             BuildStatus::Unreproducible(hashes) => {
                 let parsed_drv = Derivation::parse(&Path::new(&response.drv)).unwrap();
 
@@ -161,25 +146,25 @@ fn main() {
                     "<li><code>{}</code><ul>",
                     response.drv
                 ));
-                for (output, (hashA, hashB)) in hashes.iter() {
+                for (output, (hash_a, hash_b)) in hashes.iter() {
 
                     if let Some(output_path) = parsed_drv.outputs().get(output) {
-                        let destName = format!("{}-{}.html", hashA, hashB);
-                        let dest = diff_dir.join(&destName);
+                        let dest_name = format!("{}-{}.html", hash_a, hash_b);
+                        let dest = diff_dir.join(&dest_name);
 
                         if dest.exists() {
                             // ok
                         } else {
                             println!("Diffing {}'s {}: {} vs {}",
-                                     response.drv, output, hashA, hashB
+                                     response.drv, output, hash_a, hash_b
                             );
 
-                            let casA = read_cas.str_to_id(hashA).unwrap();
-                            let casB = read_cas.str_to_id(hashB).unwrap();
+                            let cas_a = read_cas.str_to_id(hash_a).unwrap();
+                            let cas_b = read_cas.str_to_id(hash_b).unwrap();
                             let savedto = diffoscope.nars(
                                 &output_path.file_name().unwrap().to_string_lossy(),
-                                &casA.as_path_buf(),
-                                &casB.as_path_buf()
+                                &cas_a.as_path_buf(),
+                                &cas_b.as_path_buf()
                             ).unwrap();
                             println!("saved to: {}", savedto.display());
                             fs::copy(
@@ -189,7 +174,7 @@ fn main() {
                         }
                         unreproducible_list.push(format!(
                             "<li><a href=\"./diff/{}\">(diffoscope)</a> {}</li>",
-                            destName,
+                            dest_name,
                             output
                         ));
 
@@ -203,7 +188,7 @@ fn main() {
                 unreproducible_list.push(format!(
                     "</ul></li>"
                 ));
-                unreproducible +=1;
+
                 println!("{:#?}", hashes);
             },
         }
