@@ -18,6 +18,7 @@ function main() {
     export RUST_LOG=debug
     cargo run --bin check -- "$REV" "$HASH"
     cargo run --bin report -- "$REV" "$HASH"
+    rsync  -r ./report/ gsc.io:r13y.com
 }
 
 main
