@@ -13,7 +13,7 @@ pub struct Derivation {
     // platform,
     // builder,
     // args,
-    env: HashMap<String, String>,
+    // env: HashMap<String, String>,
 }
 
 impl Derivation {

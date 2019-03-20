@@ -45,7 +45,7 @@ impl Store {
         let line = lines.pop().expect("Just verified one line above")?;
 
         let path = PathBuf::from(line);
-        self.create_gc_root(&path, &gc_root);
+        self.create_gc_root(&path, &gc_root)?;
         Ok(path)
     }
 
@@ -86,11 +86,17 @@ impl From<io::Error> for RealiseError {
 #[derive(Debug)]
 pub enum AddToStoreError {
     Io(io::Error),
-    TooManyLines(Vec<Result<String, io::Error>>)
+    TooManyLines(Vec<Result<String, io::Error>>),
+    Realise(RealiseError),
 }
 impl From<io::Error> for AddToStoreError {
     fn from(e: io::Error) -> AddToStoreError {
         AddToStoreError::Io(e)
+    }
+}
+impl From<RealiseError> for AddToStoreError {
+    fn from(e: RealiseError) -> AddToStoreError {
+        AddToStoreError::Realise(e)
     }
 }
 
@@ -117,7 +123,7 @@ impl ExportNarWait {
             Ok(())
         } else {
             let mut stderr = String::new();
-            self.stderr.read_to_string(&mut stderr);
+            self.stderr.read_to_string(&mut stderr)?;
             Err(ExportNarFinishError::Failed(
                 result.code(),
                 stderr,
