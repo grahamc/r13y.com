@@ -9,5 +9,6 @@ mkShell {
     jq
     nix
     cargo
+    curl
   ];
 }
