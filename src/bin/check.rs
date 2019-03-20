@@ -181,7 +181,7 @@ fn main() {
                         }
                     };
 
-                    debug!("(thread-{}) Building drv: {:#?}", thread_id, drv);
+                    info!("(thread-{}) Checking: {:#?}", thread_id, drv);
 
                     let first_build = Command::new("nix-store")
                         .arg("--add-root").arg(&gc_root_a).arg("--indirect")
@@ -198,7 +198,7 @@ fn main() {
                           &drv, first_build.code()
                     );
                     if ! first_build.success() {
-                        info!("First build of {:?} failed", &drv);
+                        info!("(thread-{}) First build of {:?} failed", thread_id, &drv);
                         result_tx.send(BuildResponseV1 {
                             request: request.clone(),
                             drv: drv.to_str().unwrap().to_string(),
@@ -225,14 +225,14 @@ fn main() {
                     );
 
                     if second_build.success() {
-                        info!("Reproducible: {:?}", &drv);
+                        info!("(thread-{}) Reproducible: {:?}", thread_id, drv);
                         result_tx.send(BuildResponseV1 {
                             request: request.clone(),
                             drv: drv.to_str().unwrap().to_string(),
                             status: BuildStatus::Reproducible
                         }).unwrap();
                     } else {
-                        info!("Unreproducible: {:?}", &drv);
+                        info!("(thread-{}) Unreproducible: {:?}", thread_id, drv);
                         let parsed_drv = Derivation::parse(&drv).unwrap();
 
                         // For each output, look for a .check directory.
