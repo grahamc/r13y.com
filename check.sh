@@ -14,7 +14,6 @@ function main() {
     export REV=$(nixpkgs_rev)
     export HASH=$(nix-prefetch-url --unpack "https://github.com/NixOS/nixpkgs/archive/${REV}.tar.gz")
     export RUST_BACKTRACE=1
-    export RUST_LOG=debug
     cargo run --bin check -- "$REV" "$HASH"
     cargo run --bin report -- "$REV" "$HASH"
     rsync  -r ./report/ gsc.io:r13y.com
