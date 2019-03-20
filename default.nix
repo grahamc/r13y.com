@@ -8,5 +8,6 @@ mkShell {
     git
     jq
     nix
+    cargo
   ];
 }

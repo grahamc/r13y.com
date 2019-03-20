@@ -59,6 +59,11 @@ function have_checked_before() {
 function main() {
     update_nixpkgs
     export REV=$(nixpkgs_rev)
+    export HASH=$(nix-prefetch-url --unpack "https://github.com/NixOS/nixpkgs/archive/${REV}.tar.gz")
+    cd ./r13y
+    RUST_BACKTRACE=1 RUST_LOG=debug cargo run --bin check -- "$REV" "$HASH"
+    RUST_BACKTRACE=1 RUST_LOG=debug cargo run --bin report -- "$REV" "$HASH"
+    exit
     export LOGFILE="./reproducibility-log-$REV"
 
     top_level_drv=$(find_iso_minimal_drv_x86_64_linux)
