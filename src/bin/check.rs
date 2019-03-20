@@ -198,7 +198,7 @@ fn main() {
                           &drv, first_build.code()
                     );
                     if ! first_build.success() {
-                        debug!("Not checking {:?} again", &drv);
+                        info!("First build of {:?} failed", &drv);
                         result_tx.send(BuildResponseV1 {
                             request: request.clone(),
                             drv: drv.to_str().unwrap().to_string(),
@@ -225,13 +225,14 @@ fn main() {
                     );
 
                     if second_build.success() {
+                        info!("Reproducible: {:?}", &drv);
                         result_tx.send(BuildResponseV1 {
                             request: request.clone(),
                             drv: drv.to_str().unwrap().to_string(),
                             status: BuildStatus::Reproducible
                         }).unwrap();
                     } else {
-                        debug!("Unreproducible, finding and tarring outputs");
+                        info!("Unreproducible: {:?}", &drv);
                         let parsed_drv = Derivation::parse(&drv).unwrap();
 
                         // For each output, look for a .check directory.
