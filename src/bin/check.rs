@@ -40,6 +40,15 @@ fn main() {
             nixpkgs_sha256sum: env::args().nth(2).unwrap(),
             result_url: "bogus".into(),
             subsets: vec![
+                ( // Nixpkgs' stdenv for a reduced package set for
+                  // testing automation
+                    Subset::Nixpkgs,
+                    Some(vec![
+                        vec!["stdenv".into()]
+                    ])
+                )
+
+                /*
                 (
                     Subset::NixOSReleaseCombined,
                     Some(vec![
@@ -48,6 +57,7 @@ fn main() {
                              "x86_64-linux".into()]
                     ])
                 )
+                */
             ].into_iter().collect()
         }
     );
