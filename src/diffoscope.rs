@@ -1,11 +1,8 @@
 use std::io;
 use std::fs;
-use std::fs::{File, rename, create_dir_all};
-use std::io::{BufReader, Read, Write, BufWriter};
+use std::fs::{File, create_dir_all};
 use std::process::{Command, Stdio};
 use std::path::{Path, PathBuf};
-use sha2::Sha256;
-use sha2::Digest;
 use tempdir::TempDir;
 use contentaddressedstorage::ContentAddressedStorage;
 
@@ -21,60 +18,60 @@ impl Diffoscope {
         }
     }
 
-    pub fn nars(&self, name: &str, pathA: &Path, pathB: &Path) -> Result<PathBuf, io::Error> {
+    pub fn nars(&self, name: &str, path_a: &Path, path_b: &Path) -> Result<PathBuf, io::Error> {
         assert!(!name.contains("/"));
         let tempdir = TempDir::new("diffoscope-scratch").unwrap();
-        let relativeA = PathBuf::from(name).join("A");
-        let relativeB = PathBuf::from(name).join("B");
+        let relative_a = PathBuf::from(name).join("A");
+        let relative_b = PathBuf::from(name).join("B");
 
-        let destA = tempdir.path().join(&relativeA);
-        create_dir_all(&destA.parent().unwrap()).unwrap();
-        let destB = tempdir.path().join(&relativeB);
+        let dest_a = tempdir.path().join(&relative_a);
+        create_dir_all(&dest_a.parent().unwrap()).unwrap();
+        let dest_b = tempdir.path().join(&relative_b);
 
         {
-            warn!("Opening {:?}", pathA);
-            let mut openA = File::open(pathA)?;
-            warn!("Opened {:?}", pathA);
+            warn!("Opening {:?}", path_a);
+            let mut open_a = File::open(path_a)?;
+            warn!("Opened {:?}", path_a);
 
-            let mut loadA = Command::new("nix-store")
+            let mut load_a = Command::new("nix-store")
                 .arg("--restore")
-                .arg(&destA)
+                .arg(&dest_a)
                 .stdin(Stdio::piped())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .spawn()
                 .expect("failed to execute process");
-            io::copy(&mut openA, &mut loadA.stdin.take().unwrap()).unwrap();
-            loadA.wait().unwrap();
-            fix_time(&destA)?;
+            io::copy(&mut open_a, &mut load_a.stdin.take().unwrap()).unwrap();
+            load_a.wait().unwrap();
+            fix_time(&dest_a)?;
         }
 
         {
-            warn!("Opening {:?}", pathB);
-            let mut openB = File::open(pathB)?;
-            warn!("Opened {:?}", pathB);
-            let mut loadB = Command::new("nix-store")
+            warn!("Opening {:?}", path_b);
+            let mut open_b = File::open(path_b)?;
+            warn!("Opened {:?}", path_b);
+            let mut load_b = Command::new("nix-store")
                 .arg("--restore")
-                .arg(&destB)
+                .arg(&dest_b)
                 .stdin(Stdio::piped())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .spawn()
                 .expect("failed to execute process");
-            io::copy(&mut openB, &mut loadB.stdin.take().unwrap()).unwrap();
-            loadB.wait().unwrap();
-            fix_time(&destB)?;
+            io::copy(&mut open_b, &mut load_b.stdin.take().unwrap()).unwrap();
+            load_b.wait().unwrap();
+            fix_time(&dest_b)?;
         }
 
-        println!("{:?}", destA.exists());
-        println!("{:?}", destB.exists());
+        println!("{:?}", dest_a.exists());
+        println!("{:?}", dest_b.exists());
 
         let mut diff = Command::new("diffoscope")
             .arg("--html")
             .arg("-")
             .current_dir(&tempdir)
-            .arg(&relativeA)
-            .arg(&relativeB)
+            .arg(&relative_a)
+            .arg(&relative_b)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
@@ -91,22 +88,26 @@ impl Diffoscope {
 }
 
 
-fn fix_time(dir: &Path) -> io::Result<()> {
-    let mut chtime = Command::new("touch")
+fn fix_time(path: &Path) -> io::Result<()> {
+    let chtime = Command::new("touch")
         .arg("--date")
         .arg("@1")
         .arg("--no-dereference")
-        .arg(&dir)
+        .arg(&path)
         .stdin(Stdio::null())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .status()
-        .expect("failed to execute process");
+        .expect("Failed to execute process");
 
-    if dir.is_dir() {
-        for entry in fs::read_dir(dir)? {
+    if !chtime.success() {
+        panic!("Failed to touch {:?}", path);
+    }
+
+    if path.is_dir() {
+        for entry in fs::read_dir(path)? {
             let entry = entry?;
-            fix_time(&entry.path());
+            fix_time(&entry.path())?;
         }
     }
     Ok(())
