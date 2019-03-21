@@ -82,12 +82,10 @@ impl Diffoscope {
             diff.stdout.take().unwrap()
         ).unwrap().as_path_buf();
 
-        if diff.wait()?.success() {
-            drop(tempdir);
-            Ok(result)
-        } else {
-            panic!("Diffoscope exited non-zero");
-        }
+        // 1 is diff present, also internal errors
+        diff.wait()?;
+        drop(tempdir);
+        Ok(result)
     }
 }
 
