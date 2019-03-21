@@ -3,8 +3,8 @@
 
 set -eux
 
-export LANG=en_US.UTF-8
-export LOCALE_ARCHIVE=/run/current-system/sw/lib/locale/locale-archive
+#export LANG=en_US.UTF-8
+#export LOCALE_ARCHIVE=/run/current-system/sw/lib/locale/locale-archive
 
 function nixpkgs_rev() (
     curl https://channels.nix.gsc.io/nixos-unstable-small/latest | cut -d' ' -f1
