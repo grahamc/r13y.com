@@ -10,5 +10,6 @@ mkShell {
     nix
     cargo
     curl
+    rsync
   ];
 }
