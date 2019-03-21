@@ -89,7 +89,7 @@ fn main() {
             info!("stderr: {:?}", line)
         }
         for line in eval.stdout.lines() {
-            info!("stdout: {:?}", line)
+            debug!("stdout: {:?}", line)
         }
 
         let query_requisites = Command::new("nix-store")
@@ -102,7 +102,7 @@ fn main() {
             info!("stderr: {:?}", line);
         }
         for line in query_requisites.stdout.lines() {
-            info!("stdout: {:?}", &line);
+            debug!("stdout: {:?}", &line);
             if let Ok(line) = line {
                 if line.ends_with(".drv") {
                     to_build.insert(line.into());
