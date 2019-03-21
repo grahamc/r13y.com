@@ -18,7 +18,7 @@ function main() {
 
     cargo run --bin check -- "$REV" "$HASH" --one
     cargo run --bin report -- "$REV" "$HASH"
-    rsync -i /etc/buildkite-r13y-ssh-private -r ./report/ r13y@r13y.com:r13y.com
+    rsync -i /etc/r13y-ssh-private -r ./report/ r13y@r13y.com:r13y.com
 }
 
 main
