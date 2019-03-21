@@ -81,9 +81,13 @@ impl Diffoscope {
         let result = self.storage.from_read(
             diff.stdout.take().unwrap()
         ).unwrap().as_path_buf();
-        diff.wait().unwrap();
-        drop(tempdir);
-        Ok(result)
+
+        if diff.wait()?.success() {
+            drop(tempdir);
+            Ok(result)
+        } else {
+            panic!("Diffoscope exited non-zero");
+        }
     }
 }
 
