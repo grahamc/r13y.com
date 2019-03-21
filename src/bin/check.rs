@@ -134,6 +134,12 @@ fn main() {
                 if line.ends_with(".drv") {
                     if ! skip_list.contains(&line) {
                         to_build.insert(line.into());
+                        if let Some(arg) = env::args().nth(3) {
+                            if arg == "--one" {
+                                // Only do one build
+                                break;
+                            }
+                        }
                     }
                 }
             }

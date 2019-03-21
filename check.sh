@@ -16,7 +16,7 @@ function main() {
     export RUST_BACKTRACE=1
     (unset RUST_LOG; cargo build)
 
-    cargo run --bin check -- "$REV" "$HASH"
+    cargo run --bin check -- "$REV" "$HASH" --one
     cargo run --bin report -- "$REV" "$HASH"
     rsync  -r ./report/ gsc.io:r13y.com
 }
