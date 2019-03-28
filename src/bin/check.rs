@@ -137,8 +137,8 @@ fn main() {
 
     let cas = ContentAddressedStorage::new(tmpdir.clone());
 
-    let maximum_cores = 8;
-    let maximum_cores_per_job = 2;
+    let maximum_cores = 3;
+    let maximum_cores_per_job = 1;
 
     // In the future, only give 1 core to jobs which don't allow
     // parallel builds
