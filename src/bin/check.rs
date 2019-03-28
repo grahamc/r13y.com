@@ -323,17 +323,18 @@ fn main() {
             ).unwrap();
         }
 
-        /*
-        let status = match response.status {
-            BuildStatus::FirstFailed => "first-failed",
-            BuildStatus::SecondFailed => "second-failed",
-            BuildStatus::Reproducible => "reproducible",
-            BuildStatus::Unreproducible(_) => "unreproducible",
-        };
-        */
+        if response.status == BuildStatus::FirstFailed {
+            warn!("FirstFailed, requeueing {:#?}", response);
+            let mut queue_unlocked = queue.lock().unwrap();
+            queue_unlocked.push(PathBuf::from(response.drv));
+            drop(queue_unlocked);
 
-        results.push(response);
-        println!("{} / {}", total, to_build_len);
+            total -= 1;
+
+        } else {
+            results.push(response);
+            println!("{} / {}", total, to_build_len);
+        }
     }
 
     for thread in threads {

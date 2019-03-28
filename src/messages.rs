@@ -117,7 +117,7 @@ pub struct BuildResponseV1 {
 /// | second-failed  | success   | failed               | no              |
 /// | unreproducible | success   | failed               | yes             |
 /// | reproducible   | success   | success              | n/a             |
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum BuildStatus {
     FirstFailed,
     SecondFailed,
