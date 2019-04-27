@@ -325,6 +325,9 @@ fn main() {
             if requeues.contains(&response.drv) {
                 warn!("FirstFailed, retried, failed again: {:#?}", response);
                 results.push(response);
+                if requeues.len() > 3 {
+                    panic!("Too many builds failed first time around.");
+                }
             } else {
                 warn!("FirstFailed, requeueing {:#?}", response);
                 requeues.push(response.drv.clone());
