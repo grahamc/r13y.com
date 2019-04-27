@@ -188,17 +188,13 @@ fn main() {
                         .arg("--realise").arg(&drv)
                         .arg("--cores").arg(format!("{}", maximum_cores_per_job))
                         .stdin(Stdio::null())
-                        .stdout(Stdio::null())
-                        .stderr(Stdio::null())
-                        .spawn()
-                        .expect("failed to execute process")
-                        .wait()
-                        .expect("failed to wait");
+                        .output()
+                        .expect("failed to execute process");
                     debug!("First build of {:?} exited with {:?}",
-                          &drv, first_build.code()
+                          &drv, first_build.status.code()
                     );
-                    if ! first_build.success() {
-                        info!("(thread-{}) First build of {:?} failed", thread_id, &drv);
+                    if ! first_build.status.success() {
+                        info!("(thread-{}) First build of {:?} failed. Result:\n#{:#?}", thread_id, &drv, first_build);
                         result_tx.send(BuildResponseV1 {
                             request: request.clone(),
                             drv: drv.to_str().unwrap().to_string(),
