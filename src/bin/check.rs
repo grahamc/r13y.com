@@ -311,6 +311,8 @@ fn main() {
     let mut i = 0;
     let mut total = 0;
 
+    let mut requeues: Vec<String> = vec![];
+
     for response in result_rx.iter() {
         i += 1;
         total += 1;
@@ -324,13 +326,18 @@ fn main() {
         }
 
         if response.status == BuildStatus::FirstFailed {
-            warn!("FirstFailed, requeueing {:#?}", response);
-            let mut queue_unlocked = queue.lock().unwrap();
-            queue_unlocked.push(PathBuf::from(response.drv));
-            drop(queue_unlocked);
+            if requeues.contains(&response.drv) {
+                warn!("FirstFailed, retried, failed again: {:#?}", response);
+                results.push(response);
+            } else {
+                warn!("FirstFailed, requeueing {:#?}", response);
+                requeues.push(response.drv.clone());
+                let mut queue_unlocked = queue.lock().unwrap();
+                queue_unlocked.push(PathBuf::from(response.drv));
+                drop(queue_unlocked);
 
-            total -= 1;
-
+                total -= 1;
+            }
         } else {
             results.push(response);
             println!("{} / {}", total, to_build_len);
