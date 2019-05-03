@@ -1,10 +1,10 @@
-use std::io;
-use std::fs;
-use std::fs::{File, create_dir_all};
-use std::process::{Command, Stdio};
-use std::path::{Path, PathBuf};
-use tempdir::TempDir;
 use contentaddressedstorage::ContentAddressedStorage;
+use std::fs;
+use std::fs::{create_dir_all, File};
+use std::io;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use tempdir::TempDir;
 
 #[derive(Clone)]
 pub struct Diffoscope {
@@ -13,9 +13,7 @@ pub struct Diffoscope {
 
 impl Diffoscope {
     pub fn new(storage: ContentAddressedStorage) -> Diffoscope {
-        Diffoscope {
-            storage,
-        }
+        Diffoscope { storage }
     }
 
     pub fn nars(&self, name: &str, path_a: &Path, path_b: &Path) -> Result<PathBuf, io::Error> {
@@ -78,9 +76,11 @@ impl Diffoscope {
             .spawn()
             .expect("failed to execute process");
 
-        let result = self.storage.from_read(
-            diff.stdout.take().unwrap()
-        ).unwrap().as_path_buf();
+        let result = self
+            .storage
+            .from_read(diff.stdout.take().unwrap())
+            .unwrap()
+            .as_path_buf();
 
         // 1 is diff present, also internal errors
         diff.wait()?;
@@ -88,7 +88,6 @@ impl Diffoscope {
         Ok(result)
     }
 }
-
 
 fn fix_time(path: &Path) -> io::Result<()> {
     let chtime = Command::new("touch")

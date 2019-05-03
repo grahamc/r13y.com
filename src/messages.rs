@@ -30,8 +30,8 @@
 //! The Coordination server will periodically scan for new uploads
 //! and use them to produce a build result diff.
 
+use serde::Serialize;
 use std::collections::HashMap;
-use serde::{Serialize};
 use std::path::Path;
 
 /// A build request is located at an HTTPS endpoint, the client fetches
@@ -39,7 +39,7 @@ use std::path::Path;
 /// from the list of locally-generated derivations.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum BuildRequest {
-    V1(BuildRequestV1)
+    V1(BuildRequestV1),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -60,20 +60,20 @@ pub struct BuildRequestV1 {
     /// the server is not able to ask for a specific path maliciously.
     /// In other words, the server asks for `NixOSReleaseCombined`,
     /// not `./nixos/release-combined.nix`.
-    pub subsets: HashMap<Subset, Attrs>
+    pub subsets: HashMap<Subset, Attrs>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Subset {
     Nixpkgs,
-    NixOSReleaseCombined
+    NixOSReleaseCombined,
 }
 impl Into<&'static Path> for Subset {
     fn into(self) -> &'static Path {
         (&self).into()
     }
 }
-impl <'a>Into<&'static Path> for &'a Subset {
+impl<'a> Into<&'static Path> for &'a Subset {
     fn into(self) -> &'static Path {
         match self {
             Subset::Nixpkgs => Path::new("./default.nix"),
@@ -93,7 +93,7 @@ pub type Attr = Vec<String>;
 /// which will optionally return a BuildUploadTokens
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum BuildResponse {
-    V1(BuildResponseV1)
+    V1(BuildResponseV1),
 }
 
 /// !!! does not account for evaluation failure !!!
@@ -133,7 +133,7 @@ pub type UploadURL = String;
 /// Provide pre-signed S3 upload URLs for uploading tokens
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum BuildUploadTokens {
-    V1(BuildUploadTokensV1)
+    V1(BuildUploadTokensV1),
 }
 
 /// Note: may not contain a presigned URL for each built file.
@@ -147,7 +147,10 @@ pub enum BuildUploadTokens {
 pub type BuildUploadTokensV1 = HashMap<Sha256Sum, UploadURL>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Signed<T> where T: Serialize {
+pub struct Signed<T>
+where
+    T: Serialize,
+{
     public_key: String,
     bytes: Vec<u8>,
     whatever: T,

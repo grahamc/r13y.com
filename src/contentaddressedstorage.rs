@@ -1,9 +1,9 @@
-use std::io;
-use std::fs::{File, rename, create_dir_all};
-use std::io::{BufReader, Read, Write, BufWriter};
-use std::path::PathBuf;
-use sha2::Sha256;
 use sha2::Digest;
+use sha2::Sha256;
+use std::fs::{create_dir_all, rename, File};
+use std::io;
+use std::io::{BufReader, BufWriter, Read, Write};
+use std::path::PathBuf;
 use tempdir::TempDir;
 
 #[derive(Clone)]
@@ -13,9 +13,7 @@ pub struct ContentAddressedStorage {
 
 impl ContentAddressedStorage {
     pub fn new(root: PathBuf) -> ContentAddressedStorage {
-        ContentAddressedStorage {
-            root,
-        }
+        ContentAddressedStorage { root }
     }
 
     pub fn str_to_id(&self, id: &str) -> Option<ID> {
@@ -25,22 +23,19 @@ impl ContentAddressedStorage {
         } else {
             None
         }
-
     }
 
     pub fn from_read<T: Read>(&self, reader: T) -> Result<ID, io::Error> {
         let mut reader = BufReader::new(reader);
         create_dir_all(&self.root)?;
         let tempdir = TempDir::new_in(&self.root, "cas-scratch").unwrap();
-        let tempfile = tempdir
-            .path()
-            .join("cas");
+        let tempfile = tempdir.path().join("cas");
 
         let mut digest = Sha256::new();
         debug!("writing CAS to {:?}", &tempfile);
         let mut f = BufWriter::new(File::create(&tempfile).unwrap());
 
-        let mut buf = [0;4096];
+        let mut buf = [0; 4096];
         loop {
             // loop duped from std::io::copy
             let len = match reader.read(&mut buf) {

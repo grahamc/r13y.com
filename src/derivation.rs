@@ -1,9 +1,9 @@
-use std::io::BufRead;
 use serde_json;
 use std;
-use std::process::Command;
-use std::path::{Path, PathBuf};
 use std::collections::HashMap;
+use std::io::BufRead;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
 #[derive(Deserialize)]
 pub struct Derivation {
@@ -42,15 +42,9 @@ impl Derivation {
     pub fn outputs(&self) -> HashMap<&String, &PathBuf> {
         self.outputs
             .iter()
-            .map(|(name, submap)| {
-                (name, submap.get("path"))
-            })
-            .filter(|(_, path)| {
-                path.is_some()
-            })
-            .map(|(name, path)| {
-                (name, path.unwrap())
-            })
+            .map(|(name, submap)| (name, submap.get("path")))
+            .filter(|(_, path)| path.is_some())
+            .map(|(name, path)| (name, path.unwrap()))
             .collect()
     }
 }
@@ -59,7 +53,7 @@ impl Derivation {
 pub enum DerivationParseError {
     Io(std::io::Error),
     JsonDecode(serde_json::Error),
-    NotInResult
+    NotInResult,
 }
 
 impl From<serde_json::Error> for DerivationParseError {
