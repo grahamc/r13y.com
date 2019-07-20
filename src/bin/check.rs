@@ -49,24 +49,23 @@ fn main() {
         BuildRequest::V1(ref req) => req.clone(),
     };
 
-    let mut results: Vec<BuildResponseV1>;
+    let mut results: Vec<BuildResponseV1> = vec![];
     let mut skip_list: HashSet<String> = HashSet::new();
 
     if let Ok(log_file) = File::open(format!(
         "reproducibility-log-{}.json",
         &job.nixpkgs_revision
     )) {
-        results = serde_json::from_reader(log_file).unwrap();
+        let prev_results: Vec<BuildResponseV1> = serde_json::from_reader(log_file).unwrap();
 
-        for elem in results.iter() {
+        for elem in prev_results.into_iter() {
             if elem.status == BuildStatus::FirstFailed {
                 info!("Ignoring for skiplist as it failed the first time: {:#?}", &elem);
             } else {
                 skip_list.insert(elem.drv.clone());
+                results.push(elem);
             }
         }
-    } else {
-        results = vec![];
     };
 
     let (result_tx, result_rx) = channel();
