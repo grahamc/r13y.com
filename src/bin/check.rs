@@ -59,7 +59,11 @@ fn main() {
         results = serde_json::from_reader(log_file).unwrap();
 
         for elem in results.iter() {
-            skip_list.insert(elem.drv.clone());
+            if elem.status == BuildStatus::FirstFailed {
+                info!("Ignoring for skiplist as it failed the first time: {:#?}", &elem);
+            } else {
+                skip_list.insert(elem.drv.clone());
+            }
         }
     } else {
         results = vec![];
