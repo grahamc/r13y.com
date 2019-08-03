@@ -3,7 +3,7 @@ use log::{debug, info, warn};
 use crate::{
     cas::ContentAddressedStorage,
     derivation::Derivation,
-    eval::eval,
+    eval::{eval, load_r13y_log},
     messages::{BuildRequest, BuildResponseV1, BuildStatus, Hashes},
     store::Store,
 };
@@ -25,6 +25,12 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
     };
 
     let mut results: Vec<BuildResponseV1> = vec![];
+    let prev_results = load_r13y_log(&job.nixpkgs_revision);
+    results.extend(
+        prev_results
+            .into_iter()
+            .filter(|e| e.status != BuildStatus::FirstFailed),
+    );
     let (result_tx, result_rx) = channel();
 
     let tmpdir = PathBuf::from("./tmp/");
