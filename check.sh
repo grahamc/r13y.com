@@ -29,8 +29,18 @@ function main() {
     export RUST_BACKTRACE=1
     (unset RUST_LOG; cargo build)
 
-    cargo run --bin check -- "$REV" "$HASH"
-    cargo run --bin report -- "$REV" "$HASH"
+    cargo run -- \
+          --subset nixos:nixos.iso_minimal.x86_64-linux \
+          --rev "$REV" \
+          --sha256 "$HASH" \
+          check
+
+    cargo run -- \
+          --subset nixos:nixos.iso_minimal.x86_64-linux \
+          --rev "$REV" \
+          --sha256 "$HASH" \
+          report
+
     rsync -e "ssh -i /etc/r13y-ssh-private" -r ./report/ r13y@r13y.com:/var/lib/nginx/r13y/r13y.com
 }
 
