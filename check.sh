@@ -26,17 +26,18 @@ function main() {
 
     export REV=$(nixpkgs_rev)
     export HASH=$(nix-prefetch-url --unpack "https://github.com/NixOS/nixpkgs/archive/${REV}.tar.gz")
+    export SUBSET=nixos:nixos.iso_minimal.x86_64-linux
     export RUST_BACKTRACE=1
     (unset RUST_LOG; cargo build)
 
     cargo run -- \
-          --subset nixos:nixos.iso_minimal.x86_64-linux \
+          --subset "$SUBSET" \
           --rev "$REV" \
           --sha256 "$HASH" \
           check
 
     cargo run -- \
-          --subset nixos:nixos.iso_minimal.x86_64-linux \
+          --subset "$SUBSET" \
           --rev "$REV" \
           --sha256 "$HASH" \
           report
