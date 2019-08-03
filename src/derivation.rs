@@ -43,8 +43,7 @@ impl Derivation {
         self.outputs
             .iter()
             .map(|(name, submap)| (name, submap.get("path")))
-            .filter(|(_, path)| path.is_some())
-            .map(|(name, path)| (name, path.unwrap()))
+            .filter_map(|(name, path)| path.map(|p| (name, p)))
             .collect()
     }
 }
