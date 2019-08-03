@@ -1,140 +1,36 @@
-extern crate r13y;
-extern crate serde;
-#[macro_use]
-extern crate log;
-extern crate digest;
-extern crate env_logger;
-extern crate rand;
-extern crate serde_json;
-extern crate sha2;
-extern crate tempdir;
-use r13y::contentaddressedstorage::ContentAddressedStorage;
-use r13y::derivation::Derivation;
-use r13y::messages::{
-    Attr, BuildRequest, BuildRequestV1, BuildResponseV1, BuildStatus, Hashes, Subset,
+use log::{debug, info, warn};
+
+use crate::{
+    cas::ContentAddressedStorage,
+    derivation::Derivation,
+    eval::eval,
+    messages::{BuildRequest, BuildResponseV1, BuildStatus, Hashes},
+    store::Store,
 };
-use r13y::store::Store;
+
 use rand::seq::SliceRandom;
-use std::collections::HashSet;
-use std::env;
-use std::fs;
-use std::fs::File;
-use std::io::{BufRead, Write};
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::sync::mpsc::channel;
-use std::sync::{Arc, Mutex};
-use std::thread;
 
-fn main() {
-    env_logger::init();
+use std::{
+    fs::{self, File},
+    io::Write,
+    path::PathBuf,
+    process::{Command, Stdio},
+    sync::{mpsc::channel, Arc, Mutex},
+    thread,
+};
 
-    let instruction = BuildRequest::V1(BuildRequestV1 {
-        nixpkgs_revision: env::args().nth(1).unwrap(),
-        nixpkgs_sha256sum: env::args().nth(2).unwrap(),
-        result_url: "bogus".into(),
-        subsets: vec![(
-            Subset::NixOSReleaseCombined,
-            Some(vec![vec![
-                "nixos".into(),
-                "iso_minimal".into(),
-                "x86_64-linux".into(),
-            ]]),
-        )]
-        .into_iter()
-        .collect(),
-    });
-
+pub fn check(instruction: BuildRequest) {
     let job = match instruction {
         BuildRequest::V1(ref req) => req.clone(),
     };
 
     let mut results: Vec<BuildResponseV1> = vec![];
-    let mut skip_list: HashSet<String> = HashSet::new();
-
-    if let Ok(log_file) = File::open(format!(
-        "reproducibility-log-{}.json",
-        &job.nixpkgs_revision
-    )) {
-        let prev_results: Vec<BuildResponseV1> = serde_json::from_reader(log_file).unwrap();
-
-        for elem in prev_results.into_iter() {
-            if elem.status == BuildStatus::FirstFailed {
-                info!("Ignoring for skiplist as it failed the first time: {:#?}", &elem);
-            } else {
-                skip_list.insert(elem.drv.clone());
-                results.push(elem);
-            }
-        }
-    };
 
     let (result_tx, result_rx) = channel();
 
     let tmpdir = PathBuf::from("./tmp/");
 
-    let mut to_build: HashSet<PathBuf> = HashSet::new();
-
-    for (subset, attrs) in job.subsets.into_iter() {
-        let drv = {
-            let mut drv = tmpdir.clone();
-            drv.push("result.drv");
-            drv
-        };
-        let path: &'static Path = (&subset).into();
-        let attrs: Vec<Attr> = attrs.unwrap_or(vec![]);
-
-        info!("Evaluating {:?} {:#?}", &subset, &attrs);
-        let eval = Command::new("nix-instantiate")
-            // .arg("--pure-eval") // See evaluate.nix for why this isn't passed yet
-            .arg("-E")
-            .arg(include_str!("./evaluate.nix"))
-            .arg("--add-root")
-            .arg(&drv)
-            .arg("--indirect")
-            .args(&[
-                "--argstr",
-                "revision",
-                &job.nixpkgs_revision,
-                "--argstr",
-                "sha256",
-                &job.nixpkgs_sha256sum,
-                "--argstr",
-                "subfile",
-                &format!("{}", path.display()),
-                "--argstr",
-                "attrsJSON",
-                &serde_json::to_string(&attrs).unwrap(),
-            ])
-            .output()
-            .expect("failed to execute process");
-
-        for line in eval.stderr.lines() {
-            info!("stderr: {:?}", line)
-        }
-        for line in eval.stdout.lines() {
-            debug!("stdout: {:?}", line)
-        }
-
-        let query_requisites = Command::new("nix-store")
-            .arg("--query")
-            .arg("--requisites")
-            .arg(&drv)
-            .output()
-            .expect("failed to execute process");
-        for line in query_requisites.stderr.lines() {
-            info!("stderr: {:?}", line);
-        }
-        for line in query_requisites.stdout.lines() {
-            debug!("stdout: {:?}", &line);
-            if let Ok(line) = line {
-                if line.ends_with(".drv") {
-                    if !skip_list.contains(&line) {
-                        to_build.insert(line.into());
-                    }
-                }
-            }
-        }
-    }
+    let to_build = eval(instruction.clone());
 
     let to_build_len = to_build.len();
     let queue: Arc<Mutex<Vec<PathBuf>>> = Arc::new(Mutex::new(to_build.into_iter().collect()));
@@ -283,7 +179,7 @@ fn main() {
                                     .expect("should have a file name")
                                     .to_owned();
                                 check_name.push(".check");
-                                let mut check_path = path.with_file_name(check_name);
+                                let check_path = path.with_file_name(check_name);
 
                                 debug!("Looking for {:?}", check_path);
 
