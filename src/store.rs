@@ -1,8 +1,8 @@
-use std::io;
-use std::io::{BufRead, Read};
-use std::path::Path;
-use std::path::PathBuf;
-use std::process::{Child, ChildStderr, ChildStdout, Command, Output, Stdio};
+use std::{
+    io::{self, BufRead, Read},
+    path::{Path, PathBuf},
+    process::{Child, ChildStderr, ChildStdout, Command, Output, Stdio},
+};
 
 pub struct Store {}
 

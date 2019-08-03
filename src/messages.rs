@@ -31,8 +31,7 @@
 //! and use them to produce a build result diff.
 
 use serde::Serialize;
-use std::collections::HashMap;
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 /// A build request is located at an HTTPS endpoint, the client fetches
 /// the request, instantiates all the derivations, and then operates

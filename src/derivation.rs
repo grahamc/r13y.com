@@ -1,9 +1,11 @@
 use serde_json;
-use std;
-use std::collections::HashMap;
-use std::io::BufRead;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+
+use std::{
+    collections::HashMap,
+    io::BufRead,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 #[derive(Deserialize)]
 pub struct Derivation {

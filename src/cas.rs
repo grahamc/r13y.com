@@ -1,7 +1,11 @@
 use sha2::{Digest, Sha256};
-use std::fs::{create_dir_all, rename, File};
-use std::io::{self, BufReader, BufWriter, Read, Write};
-use std::path::PathBuf;
+
+use std::{
+    fs::{create_dir_all, rename, File},
+    io::{self, BufReader, BufWriter, Read, Write},
+    path::PathBuf,
+};
+
 use tempdir::TempDir;
 
 #[derive(Clone)]
