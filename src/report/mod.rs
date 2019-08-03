@@ -4,7 +4,7 @@ use crate::{
     cas::ContentAddressedStorage,
     derivation::Derivation,
     diffoscope::Diffoscope,
-    eval::eval,
+    eval::{eval, load_r13y_log},
     messages::{BuildRequest, BuildResponseV1, BuildStatus},
 };
 
@@ -19,14 +19,10 @@ pub fn report(instruction: BuildRequest) {
         BuildRequest::V1(ref req) => req.clone(),
     };
 
-    let tmpdir = PathBuf::from("./tmp/");
-    let results: Vec<BuildResponseV1> = serde_json::from_reader(
-        File::open(format!("reproducibility-log-{}.json", job.nixpkgs_revision)).unwrap(),
-    )
-    .unwrap();
-
+    let results = load_r13y_log(&job.nixpkgs_revision);
     let to_build = eval(instruction.clone());
 
+    let tmpdir = PathBuf::from("./tmp/");
     let report_dir = PathBuf::from("./report/");
     fs::create_dir_all(&report_dir).unwrap();
     let diff_dir = PathBuf::from("./report/diff");
