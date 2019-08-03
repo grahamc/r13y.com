@@ -20,6 +20,11 @@ struct Opt {
     #[structopt(subcommand)]
     mode: Mode,
 
+    #[structopt(long = "max-cores", default_value = "3")]
+    maximum_cores: u16,
+    #[structopt(long = "max-cores-per-job", default_value = "1")]
+    maximum_cores_per_job: u16,
+
     /// Which subsets of nixpkgs to test.
     /// Format: `subset:attr.path | subset`.
     /// subset can be either of "nixpkgs" or "nixos",
@@ -94,7 +99,7 @@ fn main() {
     debug!("Using instruction: {:#?}", instruction);
 
     match opt.mode {
-        Mode::Check => check(instruction),
+        Mode::Check => check(instruction, opt.maximum_cores, opt.maximum_cores_per_job),
         Mode::Report => report(instruction),
     }
 }

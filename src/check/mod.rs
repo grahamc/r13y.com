@@ -19,7 +19,7 @@ use std::{
     thread,
 };
 
-pub fn check(instruction: BuildRequest) {
+pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_job: u16) {
     let job = match instruction {
         BuildRequest::V1(ref req) => req.clone(),
     };
@@ -37,9 +37,6 @@ pub fn check(instruction: BuildRequest) {
     queue.lock().unwrap().shuffle(&mut rand::thread_rng());
 
     let cas = ContentAddressedStorage::new(tmpdir.clone());
-
-    let maximum_cores = 3;
-    let maximum_cores_per_job = 1;
 
     // In the future, only give 1 core to jobs which don't allow
     // parallel builds
