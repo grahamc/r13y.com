@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2018"
 authors = ["Graham Christensen <graham@grahamc.com>"]
 
+[[bin]]
+name = "r13y"
+path = "src/bin/main.rs"
+
 [dependencies]
 env_logger = "0.6.2"
 log = "0.4.8"
