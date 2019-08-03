@@ -4,7 +4,7 @@ use std::{
     fs::{self, create_dir_all, File},
     io,
     path::{Path, PathBuf},
-    process::{Command, Stdio}
+    process::{Command, Stdio},
 };
 
 use tempdir::TempDir;

@@ -25,13 +25,11 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
     };
 
     let mut results: Vec<BuildResponseV1> = vec![];
-
     let (result_tx, result_rx) = channel();
 
     let tmpdir = PathBuf::from("./tmp/");
 
     let to_build = eval(instruction.clone());
-
     let to_build_len = to_build.len();
     let queue: Arc<Mutex<Vec<PathBuf>>> = Arc::new(Mutex::new(to_build.into_iter().collect()));
     queue.lock().unwrap().shuffle(&mut rand::thread_rng());

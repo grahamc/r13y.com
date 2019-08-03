@@ -1,7 +1,4 @@
-use crate::{
-    cas::ID,
-    messages::Sha256Sum
-};
+use crate::{cas::ID, messages::Sha256Sum};
 
 impl From<ID> for Sha256Sum {
     fn from(id: ID) -> Sha256Sum {

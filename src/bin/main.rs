@@ -77,8 +77,11 @@ fn main() {
 
     debug!("Using options: {:#?}", opt);
 
-    let subsets = opt.subsets
-        .into_iter().into_group_map().into_iter()
+    let subsets = opt
+        .subsets
+        .into_iter()
+        .into_group_map()
+        .into_iter()
         .map(|(subset, group)| {
             let attrs = if group.iter().any(<Vec<String>>::is_empty) {
                 None

@@ -21,10 +21,8 @@ fn log_command_output(output: Output) {
 }
 
 pub fn load_r13y_log(rev: &str) -> Vec<BuildResponseV1> {
-    if let Ok(log_file) = File::open(format!(
-        "reproducibility-log-{}.json", rev
-    )) {
-        serde_json::from_reader(log_file).unwrap()
+    if let Ok(log_file) = File::open(format!("reproducibility-log-{}.json", rev)) {
+        serde_json::from_reader(log_file).expect("Unable to parse r13y log")
     } else {
         Vec::new()
     }
