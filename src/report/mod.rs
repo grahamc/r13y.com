@@ -5,7 +5,7 @@ use crate::{
     derivation::Derivation,
     diffoscope::Diffoscope,
     eval::{eval, load_r13y_log},
-    messages::{BuildRequest, BuildResponseV1, BuildStatus},
+    messages::{BuildRequest, BuildStatus},
 };
 
 use std::{
