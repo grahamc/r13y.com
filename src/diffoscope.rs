@@ -1,9 +1,12 @@
-use contentaddressedstorage::ContentAddressedStorage;
-use std::fs;
-use std::fs::{create_dir_all, File};
-use std::io;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use crate::cas::ContentAddressedStorage;
+
+use std::{
+    fs::{self, create_dir_all, File},
+    io,
+    path::{Path, PathBuf},
+    process::{Command, Stdio}
+};
+
 use tempdir::TempDir;
 
 #[derive(Clone)]
@@ -17,7 +20,7 @@ impl Diffoscope {
     }
 
     pub fn nars(&self, name: &str, path_a: &Path, path_b: &Path) -> Result<PathBuf, io::Error> {
-        assert!(!name.contains("/"));
+        assert!(!name.contains('/'));
         let tempdir = TempDir::new("diffoscope-scratch").unwrap();
         let relative_a = PathBuf::from(name).join("A");
         let relative_b = PathBuf::from(name).join("B");
