@@ -28,12 +28,20 @@ pub fn load_r13y_log(rev: &str) -> Vec<BuildResponseV1> {
     }
 }
 
-pub fn eval(instruction: BuildRequest) -> HashSet<PathBuf> {
+pub struct JobInstantiation {
+    pub results: Vec<BuildResponseV1>,
+    pub to_build: HashSet<PathBuf>,
+    pub skip_list: HashSet<PathBuf>
+}
+
+pub fn eval(instruction: BuildRequest) -> JobInstantiation {
     let job = match instruction {
         BuildRequest::V1(ref req) => req.clone(),
     };
 
-    let mut skip_list: HashSet<String> = HashSet::new();
+    let mut results = Vec::new();
+
+    let mut skip_list = HashSet::new();
     let prev_results = load_r13y_log(&job.nixpkgs_revision);
     for elem in prev_results.into_iter() {
         if elem.status == BuildStatus::FirstFailed {
@@ -42,8 +50,8 @@ pub fn eval(instruction: BuildRequest) -> HashSet<PathBuf> {
                 &elem
             );
         } else {
-            skip_list.insert(elem.drv.clone());
-            // results.push(elem);
+            skip_list.insert(PathBuf::from(&elem.drv));
+            results.push(elem);
         }
     }
 
@@ -90,12 +98,12 @@ pub fn eval(instruction: BuildRequest) -> HashSet<PathBuf> {
             .expect("failed to execute process");
 
         for line in query_requisites.stdout.lines().filter_map(Result::ok) {
-            if line.ends_with(".drv") && !skip_list.contains(&line) {
+            if line.ends_with(".drv") {
                 to_build.insert(line.into());
             }
         }
         log_command_output(query_requisites);
     }
 
-    to_build
+    JobInstantiation { to_build, results, skip_list }
 }
