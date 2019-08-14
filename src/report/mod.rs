@@ -4,7 +4,7 @@ use crate::{
     cas::ContentAddressedStorage,
     derivation::Derivation,
     diffoscope::Diffoscope,
-    eval::{eval, load_r13y_log},
+    eval::{eval, JobInstantiation},
     messages::{BuildRequest, BuildStatus},
 };
 
@@ -19,8 +19,9 @@ pub fn report(instruction: BuildRequest) {
         BuildRequest::V1(ref req) => req.clone(),
     };
 
-    let results = load_r13y_log(&job.nixpkgs_revision);
-    let to_build = eval(instruction.clone());
+    let JobInstantiation {
+        to_build, results, ..
+    } = eval(instruction.clone());
 
     let tmpdir = PathBuf::from("./tmp/");
     let report_dir = PathBuf::from("./report/");
