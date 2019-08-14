@@ -3,7 +3,7 @@ use log::{debug, info, warn};
 use crate::{
     cas::ContentAddressedStorage,
     derivation::Derivation,
-    eval::{eval, load_r13y_log},
+    eval::{eval, JobInstantiation},
     messages::{BuildRequest, BuildResponseV1, BuildStatus, Hashes},
     store::Store,
 };
@@ -24,19 +24,17 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
         BuildRequest::V1(ref req) => req.clone(),
     };
 
-    let mut results: Vec<BuildResponseV1> = vec![];
-    let prev_results = load_r13y_log(&job.nixpkgs_revision);
-    results.extend(
-        prev_results
-            .into_iter()
-            .filter(|e| e.status != BuildStatus::FirstFailed),
-    );
     let (result_tx, result_rx) = channel();
-
     let tmpdir = PathBuf::from("./tmp/");
 
-    let to_build = eval(instruction.clone());
+    let JobInstantiation {
+        mut to_build, mut results, skip_list, ..
+    } = eval(instruction.clone());
+
+    // Remove builds that have succeeded before, by holding onto everything not on the skip list
+    to_build.retain(|drv| !skip_list.contains(drv));
     let to_build_len = to_build.len();
+
     let queue: Arc<Mutex<Vec<PathBuf>>> = Arc::new(Mutex::new(to_build.into_iter().collect()));
     queue.lock().unwrap().shuffle(&mut rand::thread_rng());
 
