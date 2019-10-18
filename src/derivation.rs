@@ -1,9 +1,11 @@
 use serde_json;
-use std;
-use std::collections::HashMap;
-use std::io::BufRead;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+
+use std::{
+    collections::HashMap,
+    io::BufRead,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 #[derive(Deserialize)]
 pub struct Derivation {
@@ -43,8 +45,7 @@ impl Derivation {
         self.outputs
             .iter()
             .map(|(name, submap)| (name, submap.get("path")))
-            .filter(|(_, path)| path.is_some())
-            .map(|(name, path)| (name, path.unwrap()))
+            .filter_map(|(name, path)| path.map(|p| (name, p)))
             .collect()
     }
 }
