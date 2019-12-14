@@ -22,6 +22,7 @@ pub fn report(instruction: BuildRequest) {
     let links = [
         ("x86_64-linux.iso", "https://github.com/NixOS/nixpkgs/pull/74174"),
         ("opensc", "https://github.com/OpenSC/OpenSC/pull/1839"),
+        ("udisks", "https://github.com/storaged-project/udisks/issues/715"),
     ];
 
     let JobInstantiation {
@@ -66,7 +67,7 @@ pub fn report(instruction: BuildRequest) {
                 unreproducible_list.push(format!("<li><code>{}</code><ul>", response.drv));
                 for (keyword, link) in links.iter() {
                     if response.drv.contains(keyword) {
-                        unreproducible_list.push(format!("<li>Fix possibly <a href=\"{}\">incoming</a></li>", link));
+                        unreproducible_list.push(format!("<li><a href=\"{}\">more info...</a></li>", link));
                     }
                 }
                 for (output, (hash_a, hash_b)) in hashes.iter() {
