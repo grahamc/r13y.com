@@ -19,6 +19,11 @@ pub fn report(instruction: BuildRequest) {
         BuildRequest::V1(ref req) => req.clone(),
     };
 
+    let links = [
+        ("x86_64-linux.iso", "https://github.com/NixOS/nixpkgs/pull/74174"),
+        ("opensc", "https://github.com/OpenSC/OpenSC/pull/1839"),
+    ];
+
     let JobInstantiation {
         to_build, results, ..
     } = eval(instruction.clone());
@@ -59,6 +64,11 @@ pub fn report(instruction: BuildRequest) {
                 let parsed_drv = Derivation::parse(&Path::new(&response.drv)).unwrap();
 
                 unreproducible_list.push(format!("<li><code>{}</code><ul>", response.drv));
+                for (keyword, link) in links.iter() {
+                    if response.drv.contains(keyword) {
+                        unreproducible_list.push(format!("<li>Fix possibly <a href=\"{}\">incoming</a></li>", link));
+                    }
+                }
                 for (output, (hash_a, hash_b)) in hashes.iter() {
                     if let Some(output_path) = parsed_drv.outputs().get(output) {
                         let dest_name = format!("{}-{}.html", hash_a, hash_b);
