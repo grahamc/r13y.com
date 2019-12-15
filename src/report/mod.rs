@@ -23,6 +23,7 @@ pub fn report(instruction: BuildRequest) {
         ("x86_64-linux.iso", "https://github.com/NixOS/nixpkgs/pull/74174"),
         ("opensc", "https://github.com/OpenSC/OpenSC/pull/1839"),
         ("udisks", "https://github.com/storaged-project/udisks/issues/715"),
+        ("gnupg", "https://github.com/NixOS/nixpkgs/issues/75687"),
     ];
 
     let JobInstantiation {
