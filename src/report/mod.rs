@@ -118,4 +118,35 @@ pub fn report(instruction: BuildRequest) {
         .as_bytes(),
     )
     .unwrap();
+
+    File::create(report_dir.join("metrics"))
+        .unwrap()
+        .write_all(format!(
+"
+# HELP r13y_check_revision Check's nixpkgs revision
+# TYPE r13y_check_revision counter
+r13y_check_revision{{revision=\"{revision}\"}} 1
+# HELP r13y_check_time_seconds Time of the latest check
+# TYPE r13y_check_time_seconds counter
+r13y_check_time_seconds {time}
+# HELP r13y_paths_checked Number of paths checked in the latest check
+# TYPE r13y_paths_checked gauge
+r13y_paths_count {total}
+# HELP r13y_path_status_counts Number of paths in each status
+# TYPE r13y_path_status_counts gauge
+r13y_path_status_count{{status=\"reproducible\"}} {reproducible}
+r13y_path_status_count{{status=\"unreproducible\"}} {unreproducible}
+r13y_path_status_count{{status=\"unchecked\"}} {unchecked}
+
+",
+            revision = job.nixpkgs_revision,
+            time = Utc::now().timestamp(),
+            total = total,
+            reproducible = reproducible,
+            unreproducible = total - reproducible,
+            unchecked = unchecked,
+        ).as_bytes())
+        .unwrap();
+
+
 }
