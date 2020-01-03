@@ -30,10 +30,13 @@ function main() {
     export RUST_BACKTRACE=1
     (unset RUST_LOG; cargo build)
 
+    SUBSET="nixpkgs:hello.x86_64-linux"
     cargo run -- \
           --subset "$SUBSET" \
           --rev "$REV" \
           --sha256 "$HASH" \
+          --max-cores 48 \
+          --max-cores-per-job 4 \
           check
 
     cargo run -- \
