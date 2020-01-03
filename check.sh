@@ -30,7 +30,7 @@ function main() {
     export RUST_BACKTRACE=1
     (unset RUST_LOG; cargo build)
 
-    SUBSET="nixpkgs:hello"
+    SUBSET="nixpkgs:stdenv.__bootPackages.stdenv.__bootPackages.stdenv.__bootPackages.stdenv.__bootPackages.stdenv.__bootPackages.binutils"
     cargo run -- \
           --subset "$SUBSET" \
           --rev "$REV" \
