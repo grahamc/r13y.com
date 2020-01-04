@@ -105,7 +105,7 @@ fn fix_time(path: &Path) -> io::Result<()> {
         .expect("Failed to execute process");
 
     if !chtime.success() {
-        panic!("Failed to touch {:?}", path);
+        warn!("Failed to touch {:?}", path);
     }
 
     if path.is_dir() {
