@@ -1,5 +1,8 @@
 use log::{debug, info, warn};
 
+mod workqueue;
+use workqueue::WorkQueue;
+
 use crate::{
     cas::ContentAddressedStorage,
     derivation::Derivation,
@@ -8,14 +11,12 @@ use crate::{
     store::Store,
 };
 
-use rand::seq::SliceRandom;
-
 use std::{
     fs::{self, File},
     io::Write,
     path::PathBuf,
     process::{Command, Stdio},
-    sync::{mpsc::channel, Arc, Mutex},
+    sync::mpsc::channel,
     thread,
 };
 
@@ -35,8 +36,7 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
     to_build.retain(|drv| !skip_list.contains(drv));
     let to_build_len = to_build.len();
 
-    let queue: Arc<Mutex<Vec<PathBuf>>> = Arc::new(Mutex::new(to_build.into_iter().collect()));
-    queue.lock().unwrap().shuffle(&mut rand::thread_rng());
+    let mut queue: WorkQueue = WorkQueue::new(to_build.into_iter().collect());
 
     let cas = ContentAddressedStorage::new(tmpdir.clone());
 
@@ -49,7 +49,7 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
             info!("Starting thread {}", thread_id);
 
             let result_tx = result_tx.clone();
-            let queue = queue.clone();
+            let mut queue = queue.clone();
             let mut tmpdir = tmpdir.clone();
             tmpdir.push(format!("thread-{}", thread_id));
 
@@ -70,11 +70,7 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
 
                     loop {
                         let drv = {
-                            let mut queue_unlocked = queue.lock().unwrap();
-                            let job = queue_unlocked.pop();
-                            drop(queue_unlocked);
-
-                            if let Some(job) = job {
+                            if let Some(job) = queue.next() {
                                 job
                             } else {
                                 debug!("no more work, shutting down {}", thread_id);
@@ -265,9 +261,7 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
             } else {
                 warn!("FirstFailed, requeueing {:#?}", response);
                 requeues.push(response.drv.clone());
-                let mut queue_unlocked = queue.lock().unwrap();
-                queue_unlocked.push(PathBuf::from(response.drv));
-                drop(queue_unlocked);
+                queue.push(PathBuf::from(response.drv));
 
                 total -= 1;
             }
