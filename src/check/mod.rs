@@ -20,6 +20,134 @@ use std::{
     thread,
 };
 
+fn check_reproducibility(thread_id: u16, gc_root_a: &PathBuf, drv: &PathBuf, cores: u16) -> Result<BuildStatus,()> {
+    let first_build = Command::new("nix-store")
+        .arg("--add-root")
+        .arg(&gc_root_a)
+        .arg("--indirect")
+        .arg("--realise")
+        .arg(&drv)
+        .arg("--cores")
+        .arg(format!("{}", cores))
+        .stdin(Stdio::null())
+        .output()
+        .expect("failed to execute process");
+
+    debug!(
+        "First build of {:?} exited with {:?}",
+        &drv,
+        first_build.status.code()
+    );
+
+    if !first_build.status.success() {
+        info!(
+            "(thread-{}) First build of {:?} failed. Result:\n#{:#?}",
+            thread_id, &drv, first_build
+        );
+
+        return Ok(BuildStatus::FirstFailed);
+    }
+
+    debug!(
+        "(thread-{}) Performing --check build: {:#?}",
+        thread_id, drv
+    );
+    let second_build = Command::new("nix-store")
+        .arg("--realise")
+        .arg(&drv)
+        .arg("--cores")
+        .arg(format!("{}", cores))
+        .arg("--check")
+        .arg("--keep-failed")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("failed to execute process")
+        .wait()
+        .expect("failed to wait");
+    debug!(
+        "Second build of {:?} exited with {:?}",
+        &drv,
+        second_build.code()
+    );
+
+    if second_build.success() {
+        info!("(thread-{}) Reproducible: {:?}", thread_id, drv);
+        return Ok(BuildStatus::Reproducible);
+    } else {
+        info!("(thread-{}) Unreproducible: {:?}", thread_id, drv);
+        return Err(());
+    }
+}
+
+fn calc(drv: &PathBuf, store: &Store, gc_root_check: &PathBuf, cas: &ContentAddressedStorage) -> BuildStatus {
+    let parsed_drv = Derivation::parse(&drv).unwrap();
+
+    // For each output, look for a .check directory.
+    // If we find one, we want to:
+    //
+    // 1. add it to the store right away -- .check directories
+    //    aren't actually store paths and cannot be saved from
+    //    being garbage collected
+    //
+    // 2. create a GC root for what we just added to the store
+    //    see: https://github.com/NixOS/nix/issues/2676
+    //
+    // 3. create a NAR for the .check store path
+    //
+    // 4. create a NAR for the output store path
+    //
+    // 5. hash the two NARs
+    //
+    // 6. return a build result with the two hashes
+    let mut hashes: Hashes = Hashes::new();
+
+    for (output, path) in parsed_drv.outputs().iter() {
+        // with_extension, naively, will replace foo-1.2.3 with foo-1.2.check
+        let mut check_name = path
+            .file_name()
+            .expect("should have a file name")
+            .to_owned();
+        check_name.push(".check");
+        let check_path = path.with_file_name(check_name);
+
+        debug!("Looking for {:?}", check_path);
+
+        if check_path.exists() {
+            debug!("Found {:?}", check_path);
+            let checked =
+                store.add_path(&check_path, &gc_root_check).unwrap();
+
+            let (path_stream, mut path_wait) =
+                store.export_nar(&path).unwrap();
+            let (checked_stream, mut checked_wait) =
+                store.export_nar(&checked).unwrap();
+
+            hashes.insert(
+                output.to_string(),
+                (
+                    cas.from_read(path_stream).unwrap().into(),
+                    cas.from_read(checked_stream).unwrap().into(),
+                ),
+            );
+
+            println!("{:#?}", hashes);
+
+            path_wait.wait().unwrap();
+            checked_wait.wait().unwrap();
+        } else {
+            debug!("Did not find {:?}", check_path);
+        }
+    }
+
+    if hashes.is_empty() {
+        BuildStatus::SecondFailed
+    } else {
+        BuildStatus::Unreproducible(hashes)
+    }
+}
+
 pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_job: u16) {
     let job = match instruction {
         BuildRequest::V1(ref req) => req.clone(),
@@ -70,150 +198,21 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
 
                     for drv in queue {
                         info!("(thread-{}) Checking: {:#?}", thread_id, drv);
-
-                        let first_build = Command::new("nix-store")
-                            .arg("--add-root")
-                            .arg(&gc_root_a)
-                            .arg("--indirect")
-                            .arg("--realise")
-                            .arg(&drv)
-                            .arg("--cores")
-                            .arg(format!("{}", maximum_cores_per_job))
-                            .stdin(Stdio::null())
-                            .output()
-                            .expect("failed to execute process");
-                        debug!(
-                            "First build of {:?} exited with {:?}",
-                            &drv,
-                            first_build.status.code()
-                        );
-                        if !first_build.status.success() {
-                            info!(
-                                "(thread-{}) First build of {:?} failed. Result:\n#{:#?}",
-                                thread_id, &drv, first_build
-                            );
-                            result_tx
-                                .send(BuildResponseV1 {
+                        result_tx.send(
+                            match check_reproducibility(thread_id, &gc_root_a, &drv, maximum_cores_per_job) {
+                                Ok(status) => BuildResponseV1 {
                                     request: request.clone(),
                                     drv: drv.to_str().unwrap().to_string(),
-                                    status: BuildStatus::FirstFailed,
-                                })
-                                .unwrap();
-                            continue;
-                        }
-
-                        debug!(
-                            "(thread-{}) Performing --check build: {:#?}",
-                            thread_id, drv
-                        );
-                        let second_build = Command::new("nix-store")
-                            .arg("--realise")
-                            .arg(&drv)
-                            .arg("--cores")
-                            .arg(format!("{}", maximum_cores_per_job))
-                            .arg("--check")
-                            .arg("--keep-failed")
-                            .stdin(Stdio::null())
-                            .stdout(Stdio::null())
-                            .stderr(Stdio::null())
-                            .spawn()
-                            .expect("failed to execute process")
-                            .wait()
-                            .expect("failed to wait");
-                        debug!(
-                            "Second build of {:?} exited with {:?}",
-                            &drv,
-                            second_build.code()
-                        );
-
-                        if second_build.success() {
-                            info!("(thread-{}) Reproducible: {:?}", thread_id, drv);
-                            result_tx
-                                .send(BuildResponseV1 {
+                                    status: status,
+                                },
+                                Err(()) => BuildResponseV1 {
                                     request: request.clone(),
                                     drv: drv.to_str().unwrap().to_string(),
-                                    status: BuildStatus::Reproducible,
-                                })
-                                .unwrap();
-                        } else {
-                            info!("(thread-{}) Unreproducible: {:?}", thread_id, drv);
-                            let parsed_drv = Derivation::parse(&drv).unwrap();
+                                    status: calc(&drv, &store, &gc_root_check, &cas),
+                                },
 
-                            // For each output, look for a .check directory.
-                            // If we find one, we want to:
-                            //
-                            // 1. add it to the store right away -- .check directories
-                            //    aren't actually store paths and cannot be saved from
-                            //    being garbage collected
-                            //
-                            // 2. create a GC root for what we just added to the store
-                            //    see: https://github.com/NixOS/nix/issues/2676
-                            //
-                            // 3. create a NAR for the .check store path
-                            //
-                            // 4. create a NAR for the output store path
-                            //
-                            // 5. hash the two NARs
-                            //
-                            // 6. return a build result with the two hashes
-                            let mut hashes: Hashes = Hashes::new();
-
-                            for (output, path) in parsed_drv.outputs().iter() {
-                                // with_extension, naively, will replace foo-1.2.3 with foo-1.2.check
-                                let mut check_name = path
-                                    .file_name()
-                                    .expect("should have a file name")
-                                    .to_owned();
-                                check_name.push(".check");
-                                let check_path = path.with_file_name(check_name);
-
-                                debug!("Looking for {:?}", check_path);
-
-                                if check_path.exists() {
-                                    debug!("Found {:?}", check_path);
-                                    let checked =
-                                        store.add_path(&check_path, &gc_root_check).unwrap();
-
-                                    let (path_stream, mut path_wait) =
-                                        store.export_nar(&path).unwrap();
-                                    let (checked_stream, mut checked_wait) =
-                                        store.export_nar(&checked).unwrap();
-
-                                    hashes.insert(
-                                        output.to_string(),
-                                        (
-                                            cas.from_read(path_stream).unwrap().into(),
-                                            cas.from_read(checked_stream).unwrap().into(),
-                                        ),
-                                    );
-
-                                    println!("{:#?}", hashes);
-
-                                    path_wait.wait().unwrap();
-                                    checked_wait.wait().unwrap();
-                                } else {
-                                    debug!("Did not find {:?}", check_path);
-                                }
                             }
-
-                            if hashes.is_empty() {
-                                result_tx
-                                    .send(BuildResponseV1 {
-                                        request: request.clone(),
-                                        drv: drv.to_str().unwrap().to_string(),
-                                        status: BuildStatus::SecondFailed,
-                                    })
-                                    .unwrap();
-                            } else {
-                                result_tx
-                                    .send(BuildResponseV1 {
-                                        request: request.clone(),
-                                        drv: drv.to_str().unwrap().to_string(),
-                                        status: BuildStatus::Unreproducible(hashes),
-                                    })
-                                    .unwrap();
-                            }
-                        }
+                        ).unwrap();
                     }
 
                     debug!("no more work, shutting down {}", thread_id);
