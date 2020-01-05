@@ -25,7 +25,7 @@ enum MoreToDo {
     CaptureCheckDir
 }
 
-fn check_reproducibility(thread_id: u16, gc_root_a: &PathBuf, drv: &PathBuf, cores: u16, timeout: usize) -> Result<BuildStatus,MoreToDo> {
+fn check_reproducibility(thread_id: u16, gc_root_a: &PathBuf, drv: &PathBuf, cores: u16, timeout: Option<usize>) -> Result<BuildStatus,MoreToDo> {
     let first_build = Command::new("nix-store")
         .arg("--add-root")
         .arg(&gc_root_a)
@@ -63,7 +63,7 @@ fn check_reproducibility(thread_id: u16, gc_root_a: &PathBuf, drv: &PathBuf, cor
         .arg("--cores")
         .arg(format!("{}", cores))
         .arg("--timeout")
-        .arg(format!("{}", timeout))
+        .arg(format!("{}", timeout.unwrap_or(0)))
         .arg("--check")
         .arg("--keep-failed")
         .stdin(Stdio::null())
@@ -180,7 +180,7 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
 
     // In the future, only give 1 core to jobs which don't allow
     // parallel builds
-    let timeout_seconds = 30;
+    let timeout_seconds = None;
     let slow_queue: WorkQueue = WorkQueue::new(vec![]);
     let thread_count = maximum_cores / maximum_cores_per_job;
     info!("Starting {} threads", thread_count);
