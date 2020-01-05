@@ -20,7 +20,12 @@ use std::{
     thread,
 };
 
-fn check_reproducibility(thread_id: u16, gc_root_a: &PathBuf, drv: &PathBuf, cores: u16) -> Result<BuildStatus,()> {
+enum MoreToDo {
+    RetryLonger,
+    CaptureCheckDir
+}
+
+fn check_reproducibility(thread_id: u16, gc_root_a: &PathBuf, drv: &PathBuf, cores: u16, timeout: usize) -> Result<BuildStatus,MoreToDo> {
     let first_build = Command::new("nix-store")
         .arg("--add-root")
         .arg(&gc_root_a)
@@ -57,6 +62,8 @@ fn check_reproducibility(thread_id: u16, gc_root_a: &PathBuf, drv: &PathBuf, cor
         .arg(&drv)
         .arg("--cores")
         .arg(format!("{}", cores))
+        .arg("--timeout")
+        .arg(format!("{}", timeout))
         .arg("--check")
         .arg("--keep-failed")
         .stdin(Stdio::null())
@@ -75,9 +82,12 @@ fn check_reproducibility(thread_id: u16, gc_root_a: &PathBuf, drv: &PathBuf, cor
     if second_build.success() {
         info!("(thread-{}) Reproducible: {:?}", thread_id, drv);
         return Ok(BuildStatus::Reproducible);
+    } else if second_build.code() == Some(101) {
+        info!("(thread-{}) Needs more time: {:?}", thread_id, drv);
+        return Err(MoreToDo::RetryLonger);
     } else {
         info!("(thread-{}) Unreproducible: {:?}", thread_id, drv);
-        return Err(());
+        return Err(MoreToDo::CaptureCheckDir);
     }
 }
 
@@ -170,6 +180,8 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
 
     // In the future, only give 1 core to jobs which don't allow
     // parallel builds
+    let timeout_seconds = 30;
+    let slow_queue: WorkQueue = WorkQueue::new(vec![]);
     let thread_count = maximum_cores / maximum_cores_per_job;
     info!("Starting {} threads", thread_count);
     let threads: Vec<thread::JoinHandle<()>> = ((0 + 1)..=thread_count)
@@ -178,6 +190,7 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
 
             let result_tx = result_tx.clone();
             let queue = queue.clone();
+            let mut slow_queue = slow_queue.clone();
             let mut tmpdir = tmpdir.clone();
             tmpdir.push(format!("thread-{}", thread_id));
 
@@ -198,21 +211,25 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
 
                     for drv in queue {
                         info!("(thread-{}) Checking: {:#?}", thread_id, drv);
-                        result_tx.send(
-                            match check_reproducibility(thread_id, &gc_root_a, &drv, maximum_cores_per_job) {
-                                Ok(status) => BuildResponseV1 {
+                        match check_reproducibility(thread_id, &gc_root_a, &drv, maximum_cores_per_job, timeout_seconds) {
+                            Ok(status) => {
+                                result_tx.send(BuildResponseV1 {
                                     request: request.clone(),
                                     drv: drv.to_str().unwrap().to_string(),
                                     status: status,
-                                },
-                                Err(()) => BuildResponseV1 {
+                                }).unwrap();
+                            }
+                            Err(MoreToDo::RetryLonger) => {
+                                slow_queue.push(drv);
+                            },
+                            Err(MoreToDo::CaptureCheckDir) => {
+                                result_tx.send(BuildResponseV1 {
                                     request: request.clone(),
                                     drv: drv.to_str().unwrap().to_string(),
                                     status: calc(&drv, &store, &gc_root_check, &cas),
-                                },
-
-                            }
-                        ).unwrap();
+                                }).unwrap();
+                            },
+                        }
                     }
 
                     debug!("no more work, shutting down {}", thread_id);
