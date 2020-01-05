@@ -49,7 +49,7 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
             info!("Starting thread {}", thread_id);
 
             let result_tx = result_tx.clone();
-            let mut queue = queue.clone();
+            let queue = queue.clone();
             let mut tmpdir = tmpdir.clone();
             tmpdir.push(format!("thread-{}", thread_id));
 
@@ -68,16 +68,7 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
                 .spawn(move || {
                     let store = Store::new();
 
-                    loop {
-                        let drv = {
-                            if let Some(job) = queue.next() {
-                                job
-                            } else {
-                                debug!("no more work, shutting down {}", thread_id);
-                                return;
-                            }
-                        };
-
+                    for drv in queue {
                         info!("(thread-{}) Checking: {:#?}", thread_id, drv);
 
                         let first_build = Command::new("nix-store")
@@ -224,6 +215,8 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
                             }
                         }
                     }
+
+                    debug!("no more work, shutting down {}", thread_id);
                 })
                 .unwrap()
         })
