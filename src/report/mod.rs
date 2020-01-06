@@ -24,6 +24,11 @@ pub fn report(instruction: BuildRequest) {
         ("opensc", "https://github.com/OpenSC/OpenSC/pull/1839"),
         ("udisks", "https://github.com/storaged-project/udisks/issues/715"),
         ("gnupg", "https://github.com/NixOS/nixpkgs/issues/75687"),
+        ("bash", "https://github.com/NixOS/nixpkgs/issues/77055"),
+        ("jitterentropy", "https://github.com/smuellerDD/jitterentropy-library/pull/14"),
+        ("ms-sys", "https://github.com/NixOS/nixpkgs/pull/77096"),
+        ("gnutls", "https://gitlab.com/gnutls/gnutls/merge_requests/1058"),
+        ("nixos-manual-html", "https://github.com/NixOS/rfcs/pull/64"),
     ];
 
     let JobInstantiation {
