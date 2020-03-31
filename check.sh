@@ -32,7 +32,8 @@ function main() {
           --sha256 "$HASH" \
           report
 
-    rsync -e "ssh -i /etc/r13y-ssh-private" -r ./report/ r13y@r13y.com:/var/lib/nginx/r13y/r13y.com
+    tar -cfJ ./report.tar.xz ./report
+    buildkite-agent artifact upload ./report.tar.xz
 }
 
 main
