@@ -32,7 +32,7 @@ function main() {
           --sha256 "$HASH" \
           report
 
-    tar -cfJ ./report.tar.xz ./report
+    tar -cJf ./report.tar.xz ./report
     buildkite-agent artifact upload ./report.tar.xz
 }
 
