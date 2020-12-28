@@ -20,7 +20,7 @@ pub fn report(instruction: BuildRequest) {
     };
 
     let JobInstantiation {
-        to_build, results, ..
+        to_report, results, ..
     } = eval(instruction.clone());
 
     let tmpdir = PathBuf::from("./tmp/");
@@ -40,9 +40,7 @@ pub fn report(instruction: BuildRequest) {
     let mut first_failed: Vec<String> = vec![];
 
     for response in results.into_iter().filter(|response| {
-        (match response.request {
-            BuildRequest::V1(ref req) => req.nixpkgs_revision == job.nixpkgs_revision,
-        }) && to_build.contains(&PathBuf::from(&response.drv))
+        to_report.contains(&PathBuf::from(&response.drv))
     }) {
         total += 1;
         match response.status {
