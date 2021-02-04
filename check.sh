@@ -39,7 +39,7 @@ function main() {
     buildkite-agent artifact upload ./report.tar.xz
     rm -rf report
 
-    export SUBSET=nixos:nixos.iso_plasma5.x86_64-linux
+    export SUBSET=nixos:nixos.iso_gnome.x86_64-linux
     cargo run -- \
           --subset "$SUBSET" \
           --rev "$REV" \
@@ -53,10 +53,10 @@ function main() {
           --rev "$REV" \
           --sha256 "$HASH" \
           report
-    mv report report-plasma5
+    mv report report-gnome
 
-    tar -cJf ./report-plasma5.tar.xz ./report-plasma5
-    buildkite-agent artifact upload ./report-plasma5.tar.xz
+    tar -cJf ./report-gnome.tar.xz ./report-gnome
+    buildkite-agent artifact upload ./report-gnome.tar.xz
 }
 
 main
