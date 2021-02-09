@@ -1,0 +1,15 @@
+env:
+  RUST_LOG: "info,cargo=warn"
+  TERM: "xterm"
+
+steps:
+  - command: "./check.sh"
+    agents:
+    - "r13y=true"
+    - "packet-spot=true"
+
+  - wait
+
+  - command: "./upload.sh"
+    agents:
+    - "s3-publish=true"
