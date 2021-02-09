@@ -15,22 +15,25 @@ function main() {
     export HASH=$(nix-prefetch-url --unpack "https://github.com/NixOS/nixpkgs/archive/${REV}.tar.gz")
     export SUBSET=nixos:nixos.iso_minimal.x86_64-linux
     export RUST_BACKTRACE=1
-    (unset RUST_LOG; cargo build)
+    (
+        unset RUST_LOG
+        cargo build
+    )
 
     # SUBSET="nixpkgs:stdenv.__bootPackages.stdenv.__bootPackages.stdenv.__bootPackages.stdenv.__bootPackages.stdenv.__bootPackages.binutils"
     cargo run -- \
-          --subset "$SUBSET" \
-          --rev "$REV" \
-          --sha256 "$HASH" \
-          --max-cores 48 \
-          --max-cores-per-job 4 \
-          check
+        --subset "$SUBSET" \
+        --rev "$REV" \
+        --sha256 "$HASH" \
+        --max-cores 48 \
+        --max-cores-per-job 4 \
+        check
 
     cargo run -- \
-          --subset "$SUBSET" \
-          --rev "$REV" \
-          --sha256 "$HASH" \
-          report
+        --subset "$SUBSET" \
+        --rev "$REV" \
+        --sha256 "$HASH" \
+        report
 
     tar -cJf ./report.tar.xz ./report
     buildkite-agent artifact upload ./report.tar.xz
