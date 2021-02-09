@@ -20,7 +20,7 @@ function main() {
         cargo build
     )
 
-    # SUBSET="nixpkgs:stdenv.__bootPackages.stdenv.__bootPackages.stdenv.__bootPackages.stdenv.__bootPackages.stdenv.__bootPackages.binutils"
+    export SUBSET=nixos:nixos.iso_gnome.x86_64-linux
     cargo run -- \
         --subset "$SUBSET" \
         --rev "$REV" \
@@ -34,25 +34,6 @@ function main() {
         --rev "$REV" \
         --sha256 "$HASH" \
         report
-
-    tar -cJf ./report.tar.xz ./report
-    buildkite-agent artifact upload ./report.tar.xz
-    rm -rf report
-
-    export SUBSET=nixos:nixos.iso_gnome.x86_64-linux
-    cargo run -- \
-          --subset "$SUBSET" \
-          --rev "$REV" \
-          --sha256 "$HASH" \
-          --max-cores 48 \
-          --max-cores-per-job 4 \
-          check
-
-    cargo run -- \
-          --subset "$SUBSET" \
-          --rev "$REV" \
-          --sha256 "$HASH" \
-          report
     mv report report-gnome
 
     tar -cJf ./report-gnome.tar.xz ./report-gnome
