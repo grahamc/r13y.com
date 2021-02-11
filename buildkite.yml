@@ -3,13 +3,44 @@ env:
   TERM: "xterm"
 
 steps:
-  - command: "./check.sh"
+  - command: "./check.sh nixpkgs:stdenv.__bootPackages.stdenv.__bootPackages.stdenv.__bootPackages.stdenv.__bootPackages.stdenv.__bootPackages.binutils report-trivial"
+    key: check-trivial
     agents:
     - "r13y=true"
     - "packet-spot=true"
 
-  - wait
+  - command: "./upload.sh report-trivial /trivial"
+    depends_on: check-trivial
+    agents:
+    - "s3-publish=true"
 
-  - command: "./upload.sh"
+
+
+  - command: "./check.sh nixos:nixos.iso_minimal.x86_64-linux report-iso_minimal"
+    key: check-iso_minimal
+    agents:
+    - "r13y=true"
+    - "packet-spot=true"
+
+  - command: "./upload.sh report-iso_minimal /"
+    depends_on: check-iso_minimal
+    agents:
+    - "s3-publish=true"
+
+  - command: "./upload.sh report-iso_minimal /iso_minimal"
+    depends_on: check-iso_minimal
+    agents:
+    - "s3-publish=true"
+
+
+
+  - command: "./check.sh nixos:nixos.iso_gnome.x86_64-linux report-iso_gnome"
+    key: check-iso_gnome
+    agents:
+    - "r13y=true"
+    - "packet-spot=true"
+
+  - command: "./upload.sh report-iso_gnome /iso_gnome"
+    depends_on: check-iso_gnome
     agents:
     - "s3-publish=true"

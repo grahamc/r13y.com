@@ -11,16 +11,18 @@ function nixpkgs_rev() (
 )
 
 function main() {
+    export SUBSET="$1"
+    export REPORT_NAME="$2"
     export REV=$(nixpkgs_rev)
     export HASH=$(nix-prefetch-url --unpack "https://github.com/NixOS/nixpkgs/archive/${REV}.tar.gz")
-    export SUBSET=nixos:nixos.iso_minimal.x86_64-linux
+
     export RUST_BACKTRACE=1
+
     (
         unset RUST_LOG
         cargo build
     )
 
-    # SUBSET="nixpkgs:stdenv.__bootPackages.stdenv.__bootPackages.stdenv.__bootPackages.stdenv.__bootPackages.stdenv.__bootPackages.binutils"
     cargo run -- \
         --subset "$SUBSET" \
         --rev "$REV" \
@@ -35,8 +37,10 @@ function main() {
         --sha256 "$HASH" \
         report
 
-    tar -cJf ./report.tar.xz ./report
-    buildkite-agent artifact upload ./report.tar.xz
+    mv ./report "./$REPORT_NAME"
+
+    tar -cJf "./$REPORT_NAME.tar.xz" "./$REPORT_NAME"
+    buildkite-agent artifact upload "./$REPORT_NAME.tar.xz"
 }
 
-main
+main "$1" "$2"
