@@ -12,7 +12,7 @@ use crate::{
 };
 
 use std::{
-    fs::{self, File},
+    fs::{self, rename, File},
     io::Write,
     path::PathBuf,
     process::{Command, Stdio},
@@ -159,19 +159,13 @@ fn calc(drv: &PathBuf, store: &Store, gc_root_check: &PathBuf, cas: &ContentAddr
 }
 
 pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_job: u16) {
-    let job = match instruction {
-        BuildRequest::V1(ref req) => req.clone(),
-    };
-
     let (result_tx, result_rx) = channel();
     let tmpdir = PathBuf::from("./tmp/");
 
     let JobInstantiation {
-        mut to_build, mut results, skip_list, ..
+        to_build, results, ..
     } = eval(instruction.clone());
 
-    // Remove builds that have succeeded before, by holding onto everything not on the skip list
-    to_build.retain(|drv| !skip_list.contains(drv));
     let to_build_len = to_build.len();
 
     let mut queue: WorkQueue = WorkQueue::new(to_build.into_iter().collect());
@@ -244,17 +238,26 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
 
     let mut requeues: Vec<String> = vec![];
 
+    let mut log_file = File::create("reproducibility-log.json.part").unwrap();
+
+    log_file.write_all("[\n".as_bytes()).unwrap();
+    log_file
+        .write_all(serde_json::to_string(&results.get(0)).unwrap().as_bytes())
+        .unwrap();
+    for result in results.iter() {
+        log_file.write_all(",\n".as_bytes()).unwrap();
+        log_file
+            .write_all(serde_json::to_string(&result).unwrap().as_bytes())
+            .unwrap();
+    }
+
     for response in result_rx.iter() {
         i += 1;
         total += 1;
         if i == 10 {
             i = 0;
             debug!("Writing out interim state to the reproducibility log");
-            let mut log_file = File::create(format!(
-                "reproducibility-log-{}.json",
-                &job.nixpkgs_revision
-            ))
-            .unwrap();
+            let mut log_file = File::create("reproducibility-log.json").unwrap();
             log_file
                 .write_all(serde_json::to_string(&results).unwrap().as_bytes())
                 .unwrap();
@@ -263,7 +266,6 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
         if response.status == BuildStatus::FirstFailed {
             if requeues.contains(&response.drv) {
                 warn!("FirstFailed, retried, failed again: {:#?}", response);
-                results.push(response);
                 if requeues.len() > 3 {
                     panic!("Too many builds failed first time around.");
                 }
@@ -275,7 +277,10 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
                 total -= 1;
             }
         } else {
-            results.push(response);
+            log_file.write_all(",\n".as_bytes()).unwrap();
+            log_file
+                .write_all(serde_json::to_string(&response).unwrap().as_bytes())
+                .unwrap();
             println!("{} / {}", total, to_build_len);
         }
     }
@@ -284,12 +289,6 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
         thread.join().unwrap();
     }
 
-    let mut log_file = File::create(format!(
-        "reproducibility-log-{}.json",
-        &job.nixpkgs_revision
-    ))
-    .unwrap();
-    log_file
-        .write_all(serde_json::to_string(&results).unwrap().as_bytes())
-        .unwrap();
+    log_file.write_all("\n]\n".as_bytes()).unwrap();
+    rename("reproducibility-log.json.part", "reproducibility-log.json").unwrap();
 }
