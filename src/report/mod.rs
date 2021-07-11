@@ -40,6 +40,8 @@ pub fn report(instruction: BuildRequest) {
     let mut unchecked = 0;
     let mut first_failed: Vec<String> = vec![];
 
+    let attr_name = job.subsets.values().next().unwrap().as_ref().unwrap().get(0).unwrap().join(".");
+
     for response in results.into_iter().filter(|response| {
         (match response.request {
             BuildRequest::V1(ref req) => req.nixpkgs_revision == job.nixpkgs_revision,
@@ -117,6 +119,7 @@ pub fn report(instruction: BuildRequest) {
             now = Utc::now().to_string(),
             unreproduced_list = unreproducible_list.join("\n"),
             unchecked_list = unchecked_list.join("\n"),
+            attr_name = attr_name,
         )
         .as_bytes(),
     )
