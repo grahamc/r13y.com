@@ -36,6 +36,7 @@ pub fn report(instruction: BuildRequest) {
     let mut total = 0;
     let mut reproducible = 0;
     let mut unreproducible_list: Vec<String> = vec![];
+    let mut unchecked_list: Vec<String> = vec![];
     let mut unchecked = 0;
     let mut first_failed: Vec<String> = vec![];
 
@@ -54,11 +55,12 @@ pub fn report(instruction: BuildRequest) {
             }
             BuildStatus::SecondFailed => {
                 unchecked += 1;
+                unchecked_list.push(format!("<li><code>{}</code></li>", response.drv));
             }
             BuildStatus::Unreproducible(hashes) => {
                 let parsed_drv = Derivation::parse(&Path::new(&response.drv)).unwrap();
 
-                unreproducible_list.push(format!("<li><code>{}</code><ul>", response.drv));
+                unreproducible_list.push(format!("<li><code>{}</code></li>", response.drv));
                 for (output, (hash_a, hash_b)) in hashes.iter() {
                     if let Some(output_path) = parsed_drv.outputs().get(output) {
                         let dest_name = format!("{}-{}.html", hash_a, hash_b);
@@ -113,7 +115,8 @@ pub fn report(instruction: BuildRequest) {
             percent = format!("{:.*}%", 2, 100.0 * (reproducible as f64 / total as f64)),
             revision = job.nixpkgs_revision,
             now = Utc::now().to_string(),
-            unreproduced_list = unreproducible_list.join("\n")
+            unreproduced_list = unreproducible_list.join("\n"),
+            unchecked_list = unchecked_list.join("\n"),
         )
         .as_bytes(),
     )
