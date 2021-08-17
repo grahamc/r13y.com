@@ -9,3 +9,8 @@ tar -xf "./$REPORT_NAME".tar.xz
 
 aws s3 cp "$REPORT_NAME" "s3://r13y-com$UPLOAD_DEST" --recursive --acl public-read \
     --cache-control "public; max-age=3600"
+
+DISTRIBUTION_ID=E2JKFLGW8FADQD
+aws cloudfront create-invalidation \
+    --distribution-id "$DISTRIBUTION_ID" \
+    --paths "$UPLOAD_DEST/metrics" "$UPLOAD_DEST/index.html"
