@@ -20,7 +20,7 @@ pub fn report(instruction: BuildRequest) {
     };
 
     let JobInstantiation {
-        to_build, results, ..
+        to_report, results, ..
     } = eval(instruction.clone());
 
     let tmpdir = PathBuf::from("./tmp/");
@@ -43,9 +43,7 @@ pub fn report(instruction: BuildRequest) {
     let attr_name = job.subsets.values().next().unwrap().as_ref().unwrap().get(0).unwrap().join(".");
 
     for response in results.into_iter().filter(|response| {
-        (match response.request {
-            BuildRequest::V1(ref req) => req.nixpkgs_revision == job.nixpkgs_revision,
-        }) && to_build.contains(&PathBuf::from(&response.drv))
+        to_report.contains(&PathBuf::from(&response.drv))
     }) {
         total += 1;
         match response.status {
