@@ -92,69 +92,78 @@ fn check_reproducibility(thread_id: u16, gc_root_a: &PathBuf, drv: &PathBuf, cor
 }
 
 fn calc(drv: &PathBuf, store: &Store, gc_root_check: &PathBuf, cas: &ContentAddressedStorage) -> BuildStatus {
-    let parsed_drv = Derivation::parse(&drv).unwrap();
+    match Derivation::parse(&drv) {
+        Ok(parsed_drv) => {
+            // For each output, look for a .check directory.
+            // If we find one, we want to:
+            //
+            // 1. add it to the store right away -- .check directories
+            //    aren't actually store paths and cannot be saved from
+            //    being garbage collected
+            //
+            // 2. create a GC root for what we just added to the store
+            //    see: https://github.com/NixOS/nix/issues/2676
+            //
+            // 3. create a NAR for the .check store path
+            //
+            // 4. create a NAR for the output store path
+            //
+            // 5. hash the two NARs
+            //
+            // 6. return a build result with the two hashes
+            let mut hashes: Hashes = Hashes::new();
 
-    // For each output, look for a .check directory.
-    // If we find one, we want to:
-    //
-    // 1. add it to the store right away -- .check directories
-    //    aren't actually store paths and cannot be saved from
-    //    being garbage collected
-    //
-    // 2. create a GC root for what we just added to the store
-    //    see: https://github.com/NixOS/nix/issues/2676
-    //
-    // 3. create a NAR for the .check store path
-    //
-    // 4. create a NAR for the output store path
-    //
-    // 5. hash the two NARs
-    //
-    // 6. return a build result with the two hashes
-    let mut hashes: Hashes = Hashes::new();
+            for (output, path) in parsed_drv.outputs().iter() {
+                // with_extension, naively, will replace foo-1.2.3 with foo-1.2.check
+                let mut check_name = path
+                    .file_name()
+                    .expect("should have a file name")
+                    .to_owned();
+                check_name.push(".check");
+                let check_path = path.with_file_name(check_name);
 
-    for (output, path) in parsed_drv.outputs().iter() {
-        // with_extension, naively, will replace foo-1.2.3 with foo-1.2.check
-        let mut check_name = path
-            .file_name()
-            .expect("should have a file name")
-            .to_owned();
-        check_name.push(".check");
-        let check_path = path.with_file_name(check_name);
+                debug!("Looking for {:?}", check_path);
 
-        debug!("Looking for {:?}", check_path);
+                if check_path.exists() {
+                    debug!("Found {:?}", check_path);
+                    let checked =
+                        store.add_path(&check_path, &gc_root_check).unwrap();
 
-        if check_path.exists() {
-            debug!("Found {:?}", check_path);
-            let checked =
-                store.add_path(&check_path, &gc_root_check).unwrap();
+                    let (path_stream, mut path_wait) =
+                        store.export_nar(&path).unwrap();
+                    let (checked_stream, mut checked_wait) =
+                        store.export_nar(&checked).unwrap();
 
-            let (path_stream, mut path_wait) =
-                store.export_nar(&path).unwrap();
-            let (checked_stream, mut checked_wait) =
-                store.export_nar(&checked).unwrap();
+                    hashes.insert(
+                        output.to_string(),
+                        (
+                            cas.from_read(path_stream).unwrap().into(),
+                            cas.from_read(checked_stream).unwrap().into(),
+                        ),
+                    );
 
-            hashes.insert(
-                output.to_string(),
-                (
-                    cas.from_read(path_stream).unwrap().into(),
-                    cas.from_read(checked_stream).unwrap().into(),
-                ),
-            );
+                    println!("{:#?}", hashes);
 
-            println!("{:#?}", hashes);
+                    path_wait.wait().unwrap();
+                    checked_wait.wait().unwrap();
+                } else {
+                    debug!("Did not find {:?}", check_path);
+                }
+            }
 
-            path_wait.wait().unwrap();
-            checked_wait.wait().unwrap();
-        } else {
-            debug!("Did not find {:?}", check_path);
+            if hashes.is_empty() {
+                BuildStatus::SecondFailed
+            } else {
+                BuildStatus::Unreproducible(hashes)
+            }
         }
-    }
-
-    if hashes.is_empty() {
-        BuildStatus::SecondFailed
-    } else {
-        BuildStatus::Unreproducible(hashes)
+        Err(e) => {
+            // Derivation could not be parsed?
+            // Strange, but let's not fail the entire report on it, and
+            // report the reproduction 'failed' without further information
+            eprintln!("Error parsing derivation: {e:#?}");
+            BuildStatus::SecondFailed
+        }
     }
 }
 
